@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.common.EnclaveMode
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
@@ -9,7 +10,10 @@ import org.gradle.api.tasks.OutputFile
 import java.nio.file.Files
 import javax.inject.Inject
 
-open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, private val buildType: BuildType) : ConclaveTask() {
+open class GenerateEnclaveConfig @Inject constructor(
+    objects: ObjectFactory,
+    private val enclaveMode: EnclaveMode
+) : ConclaveTask() {
     @get:Input
     val productID: Property<Int> = objects.property(Int::class.java)
     @get:Input
@@ -49,7 +53,7 @@ open class GenerateEnclaveConfig @Inject constructor(objects: ObjectFactory, pri
         val maxStackSizeBytes = getSizeBytes(maxStackSize.get())
         val maxHeapSizeBytes = getSizeBytes(maxHeapSize.get())
 
-        val disableDebug = if (buildType == BuildType.Release) 1 else 0
+        val disableDebug = if (enclaveMode == EnclaveMode.RELEASE) 1 else 0
 
         val content = """
             <EnclaveConfiguration>

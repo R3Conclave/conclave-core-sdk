@@ -1,23 +1,25 @@
 package com.r3.conclave.integrationtests.general.mockcompattests
 
 import com.google.common.collect.Sets
-import com.r3.conclave.common.EnclaveMode.DEBUG
+import com.r3.conclave.common.EnclaveMode.MOCK
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.OpaqueBytes
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.internal.MockEnclaveEnvironment
 import com.r3.conclave.host.EnclaveHost
+import com.r3.conclave.host.internal.EnclaveScanner
 import com.r3.conclave.host.internal.InternalsKt.createMockHost
-import com.r3.conclave.host.internal.InternalsKt.createNativeHost
+import com.r3.conclave.host.internal.InternalsKt.createNonMockHost
 import com.r3.conclave.integrationtests.general.commontest.TestUtils
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.debugOnlyTest
+import com.r3.conclave.integrationtests.general.commontest.TestUtils.graalvmOnlyTest
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclave
 import com.r3.conclave.integrationtests.general.threadsafeenclave.ThreadSafeEnclaveSameSigner
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assumptions.assumeTrue
-import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
@@ -60,25 +62,26 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
             // Create keys with no key ID and with a random one.
             setOf(BlankField(SgxKeyRequest::keyId), KeyIdField(OpaqueBytes(Random.nextBytes(SgxKeyId.INSTANCE.size))))
         ).map(::SecretKeySpec)
+
+        @JvmStatic
+        @BeforeAll
+        fun check() {
+            debugOnlyTest()
+            graalvmOnlyTest() // CON-1269: Accessing SGX Key does not work in Gramine
+        }
     }
 
-    private val nativeEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
+    private val nonMockEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
     private val mockEnclaves = HashMap<EnclaveSpec, EnclaveHost>()
-
-    @BeforeEach
-    fun setup() {
-        //  We want this test to run only in DEBUG mode
-        assumeTrue(DEBUG.name == System.getProperty("enclaveMode").uppercase())
-    }
 
     @AfterEach
     fun cleanUp() {
-        nativeEnclaves.values.forEach(EnclaveHost::close)
+        nonMockEnclaves.values.forEach(EnclaveHost::close)
     }
 
     @Test
     fun `mock secret keys have the same uniqueness as hardware secret keys`() {
-        val nativeUniqueness = KeyUniquenessContainer(::getNativeHost)
+        val nativeUniqueness = KeyUniquenessContainer(::getNonMockHost)
         val mockUniqueness = KeyUniquenessContainer(::getMockHost)
 
         for (spec in secretKeySpecs) {
@@ -119,18 +122,17 @@ class MockEnclaveEnvironmentHardwareCompatibilityTest {
         }
     }
 
-    private fun loadNativeHostFromFile(enclaveSpec: EnclaveSpec): EnclaveHost {
-        val enclaveClassName = enclaveSpec.enclaveClass.canonicalName
-        // Look for an SGX enclave image.
-        val enclaveMode = DEBUG
-        val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
-        val enclaveFileUrl = EnclaveHost::class.java.getResource(resourceName)!!
-        return createNativeHost(enclaveMode, enclaveFileUrl, enclaveClassName)
+    private fun loadNonMockEnclave(enclaveSpec: EnclaveSpec): EnclaveHost {
+        val results: List<EnclaveScanner.ScanResult> = EnclaveScanner().findEnclaves(enclaveSpec.enclaveClass.name)
+        val nonMockResult = checkNotNull(results.singleOrNull { it.enclaveMode != MOCK }) {
+            "Expected to find exactly one non-mock enclave. Found $results"
+        }
+        return createNonMockHost(nonMockResult)
     }
 
-    private fun getNativeHost(enclaveSpec: EnclaveSpec): EnclaveHost {
-        return nativeEnclaves.computeIfAbsent(enclaveSpec) {
-            val host = loadNativeHostFromFile(enclaveSpec)
+    private fun getNonMockHost(enclaveSpec: EnclaveSpec): EnclaveHost {
+        return nonMockEnclaves.computeIfAbsent(enclaveSpec) {
+            val host = loadNonMockEnclave(enclaveSpec)
             val attestationParameters = checkNotNull(TestUtils.getAttestationParams(host)) {
                 "Release or debug enclave required"
             }

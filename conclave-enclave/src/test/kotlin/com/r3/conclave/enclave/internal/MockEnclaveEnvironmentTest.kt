@@ -1,5 +1,6 @@
 package com.r3.conclave.enclave.internal
 
+import com.r3.conclave.common.internal.MockCallInterfaceConnector
 import com.r3.conclave.common.MockConfiguration
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.enclave.Enclave
@@ -121,6 +122,6 @@ class MockEnclaveEnvironmentTest {
     private inline fun <reified E : Enclave> createMockEnclaveEnvironment(
             mockConfiguration: MockConfiguration? = null
     ): MockEnclaveEnvironment {
-        return MockEnclaveEnvironment(E::class.java.getConstructor().newInstance(), mockConfiguration, null)
+        return MockEnclaveEnvironment(E::class.java.getConstructor().newInstance(), mockConfiguration, null, MockCallInterfaceConnector())
     }
 }

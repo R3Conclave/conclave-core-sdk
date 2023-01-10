@@ -11,7 +11,7 @@ else()
     set(DEBUG_FLAG "")
 endif()
 
-set(SGX_GIT_LABEL "sgx_2.17.1")
+set(SGX_GIT_LABEL "sgx_2.18")
 
 ExternalProject_Add(linux-sgx-ext
 # Based on linux-sgx Makefile "preparation" rules and adapted to conclave's CMakeLists.txt.
@@ -20,6 +20,7 @@ ExternalProject_Add(linux-sgx-ext
             && git clone -b ${SGX_GIT_LABEL} --depth 1 https://github.com/intel/linux-sgx.git ${BUILD_SRC_DIR}
             && git -C ${BUILD_SRC_DIR} submodule update --init --depth 1 --recursive
             && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteVerification/prepare_sgxssl.sh nobuild"
+            && bash -c "cd ${BUILD_SRC_DIR} && ./external/sgx-emm/create_symlink.sh"
             && bash -c "cd ${BUILD_SRC_DIR} && cd external/openmp/openmp_code && git apply ../0001-Enable-OpenMP-in-SGX.patch >/dev/null 2>&1 ||  git apply ../0001-Enable-OpenMP-in-SGX.patch --check -R"
             && bash -c "cd ${BUILD_SRC_DIR} && ./download_prebuilt.sh"
             && bash -c "cd ${BUILD_SRC_DIR} && ./external/dcap_source/QuoteGeneration/download_prebuilt.sh"
@@ -27,10 +28,6 @@ ExternalProject_Add(linux-sgx-ext
         SOURCE_DIR ${BUILD_SRC_DIR}
 
         PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/determinism.diff ${CMAKE_CURRENT_SOURCE_DIR}/debug.diff ${CMAKE_CURRENT_SOURCE_DIR}/pthread_changes.diff ${CMAKE_CURRENT_SOURCE_DIR}/memset.patch
-             #  The dtv.patch solves an issue we have spotted in the Intel SGX SDK, starting from version 2.15.1.
-             #    See https://github.com/intel/linux-sgx/issues/855
-             #    As this is an issue in simulation mode only, we will apply this patch until the issue is solved or closed.
-             && git apply ${CMAKE_CURRENT_SOURCE_DIR}/dtv.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/sgx_dcap_quoteverify.cpp ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quoteverify_cpp.patch
              && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteVerification/dcap_quoteverify/inc/sgx_urts_wrapper.h ${CMAKE_CURRENT_SOURCE_DIR}/dcap_sgx_urts_wrapper_h.patch
 	     && patch ${BUILD_SRC_DIR}/external/dcap_source/QuoteGeneration/quote_wrapper/quote/linux/Makefile ${CMAKE_CURRENT_SOURCE_DIR}/dcap_quote_wrapper_make.patch

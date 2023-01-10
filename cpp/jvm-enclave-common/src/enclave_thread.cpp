@@ -93,7 +93,7 @@ namespace {
         EnclaveThreadFactoryImpl(const EnclaveThreadFactoryImpl &) = delete;
 
         std::shared_ptr<Thread::Impl> create(Task f) {
-            aex_assert(f);
+            aex_assert(static_cast<bool>(f));
             auto result = std::make_shared<Thread::Impl>((std::move(f)));
             {
                 std::unique_lock<std::mutex> lock{mutex_};
@@ -168,7 +168,7 @@ Thread::Thread(Task run)
     : impl_(EnclaveThreadFactoryImpl::instance().create(std::move(run))) {}
 
 std::uint64_t Thread::id() const {
-    aex_assert(impl_);
+    aex_assert(static_cast<bool>(impl_));
     return reinterpret_cast<std::uint64_t>(impl_.get());
 }
 
@@ -181,7 +181,7 @@ void Thread::join() {
 }
 
 Thread::Impl& Thread::pimpl() const {
-    aex_assert(impl_);
+    aex_assert(static_cast<bool>(impl_));
     return *impl_;
 }
 

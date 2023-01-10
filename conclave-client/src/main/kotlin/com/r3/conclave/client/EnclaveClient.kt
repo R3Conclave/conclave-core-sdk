@@ -24,7 +24,7 @@ import java.util.concurrent.ScheduledExecutorService
  *
  * Creating a new client instance requires providing an [EnclaveConstraint] object. This acts as an identity of the
  * enclave and is used to check that the client is communicating with the intended one. A private encryption key is also
- * required. There is an constructor overload which creates a random new one for you, or you can use
+ * required. There is a constructor overload which creates a random new one for you, or you can use
  * [Curve25519PrivateKey.random](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-curve25519-private-key/random.html)
  * to create a new random one yourself.
  *

@@ -6,26 +6,22 @@ import com.r3.conclave.common.*
 import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.InternalCallType.*
 import com.r3.conclave.common.internal.attestation.Attestation
-import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.internal.kds.KDSErrorResponse
 import com.r3.conclave.common.kds.KDSKeySpec
-import com.r3.conclave.common.kds.MasterKeyType
 import com.r3.conclave.host.EnclaveHost.CallState.*
 import com.r3.conclave.host.EnclaveHost.HostState.*
 import com.r3.conclave.host.internal.*
-import com.r3.conclave.host.internal.attestation.AttestationService
-import com.r3.conclave.host.internal.attestation.AttestationServiceFactory
-import com.r3.conclave.host.internal.attestation.EnclaveQuoteService
-import com.r3.conclave.host.internal.attestation.EnclaveQuoteServiceFactory
+import com.r3.conclave.host.internal.EnclaveScanner.ScanResult
+import com.r3.conclave.host.internal.attestation.*
 import com.r3.conclave.host.internal.fatfs.FileSystemHandler
+import com.r3.conclave.host.internal.gramine.GramineEnclaveHandle
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyRequest
 import com.r3.conclave.host.internal.kds.KDSPrivateKeyResponse
 import com.r3.conclave.host.kds.KDSConfiguration
 import com.r3.conclave.mail.Curve25519PublicKey
 import com.r3.conclave.mail.MailDecryptionException
 import com.r3.conclave.utilities.internal.*
-import io.github.classgraph.ClassGraph
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -37,7 +33,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.function.Function
-import java.util.regex.Pattern
 
 /**
  * Represents an enclave running on the local CPU. Instantiating this object loads and
@@ -55,7 +50,7 @@ import java.util.regex.Pattern
  * version of Java that is supported.
  */
 class EnclaveHost private constructor(
-    private val enclaveHandle: EnclaveHandle<ExceptionReceivingHandler.Connection>
+    private val enclaveHandle: EnclaveHandle
 ) : AutoCloseable {
     /**
      * Suppress kotlin specific companion objects from our API documentation.
@@ -63,8 +58,6 @@ class EnclaveHost private constructor(
      * @suppress
      */
     companion object {
-        private const val ENV_VAR_SGX_AESM_ADDR = "SGX_AESM_ADDR"
-
         private val log = loggerFor<EnclaveHost>()
         private val signatureScheme = SignatureSchemeEdDSA()
         private val jsonMapper = JsonMapper.builder().enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS).build()
@@ -126,7 +119,7 @@ class EnclaveHost private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(enclaveClassName: String, mockConfiguration: MockConfiguration?): EnclaveHost {
-            return createEnclaveHost(findEnclave(enclaveClassName), mockConfiguration)
+            return createEnclaveHost(EnclaveScanner().findEnclave(enclaveClassName), mockConfiguration)
         }
 
         /**
@@ -146,7 +139,7 @@ class EnclaveHost private constructor(
         @JvmStatic
         @Throws(EnclaveLoadException::class, PlatformSupportException::class)
         fun load(mockConfiguration: MockConfiguration?): EnclaveHost {
-            return createEnclaveHost(findEnclave(), mockConfiguration)
+            return createEnclaveHost(EnclaveScanner().findEnclave(), mockConfiguration)
         }
 
         /**
@@ -205,12 +198,20 @@ class EnclaveHost private constructor(
         // still be available to Java users. We solve that by making it synthetic which hides it from the Java compiler.
         @JvmSynthetic
         @JvmStatic
-        internal fun internalCreateNative(
-            enclaveMode: EnclaveMode,
-            enclaveFileUrl: URL,
-            enclaveClassName: String,
-        ): EnclaveHost {
-            val enclaveHandle = NativeEnclaveHandle(enclaveMode, enclaveFileUrl, enclaveClassName, ExceptionReceivingHandler())
+        internal fun internalCreateNonMock(scanResult: ScanResult): EnclaveHost {
+            val enclaveHandle = when (scanResult) {
+                is ScanResult.GraalVM -> NativeEnclaveHandle(
+                    scanResult.enclaveMode,
+                    scanResult.enclaveClassName,
+                    scanResult.soFileUrl
+                )
+                is ScanResult.Gramine -> GramineEnclaveHandle(
+                    scanResult.enclaveMode,
+                    scanResult.enclaveClassName,
+                    scanResult.zipFileUrl
+                )
+                is ScanResult.Mock -> throw IllegalArgumentException()
+            }
             return EnclaveHost(enclaveHandle)
         }
 
@@ -228,136 +229,22 @@ class EnclaveHost private constructor(
             val enclaveHandle = MockEnclaveHandle(
                 constructor.newInstance(),
                 mockConfiguration,
-                kdsConfig,
-                ExceptionReceivingHandler()
+                kdsConfig
             )
             return EnclaveHost(enclaveHandle)
         }
 
-        /**
-         * Searches for an enclave. There are two places where an enclave can be found.
-         * 1) In an SGX signed enclave file (.so)
-         * 2) For mock enclaves, an existing class named 'className' in the classpath
-         *
-         * For a .so enclave file the function looks in the classpath at /package/namespace/classname-mode.signed.so.
-         * For example, it will look for the enclave file of "com.foo.bar.Enclave" at /com/foo/bar/Enclave-$mode.signed.so.
-         *
-         * For mock enclaves, the function just determines whether the class specified as 'className' exists.
-         *
-         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
-         *
-         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
-         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
-         */
-        private fun findEnclave(enclaveClassName: String): EnclaveScanResult {
-            val results = ArrayList<EnclaveScanResult>()
-            EnclaveMode.values().mapNotNullTo(results) { findNativeEnclave(enclaveClassName, it) }
-            findMockEnclave(enclaveClassName)?.let { results += it }
-            return getSingleResult(results, enclaveClassName)
-        }
-
-        private fun findNativeEnclave(enclaveClassName: String, enclaveMode: EnclaveMode): EnclaveScanResult.Native? {
-            val resourceName = "/${enclaveClassName.replace('.', '/')}-${enclaveMode.name.lowercase()}.signed.so"
-            val url = EnclaveHost::class.java.getResource(resourceName)
-            return url?.let { EnclaveScanResult.Native(enclaveClassName, enclaveMode, url) }
-        }
-
-        private fun findMockEnclave(enclaveClassName: String): EnclaveScanResult.Mock? {
-            return try {
-                Class.forName(enclaveClassName)
-                EnclaveScanResult.Mock(enclaveClassName)
-            } catch (e: ClassNotFoundException) {
-                null
-            }
-        }
-
-        /**
-         * Performs a search for an enclave by performing a classpath and module scan. There are two places where an enclave
-         * can be found.
-         * 1) In an SGX signed enclave file (.so)
-         * 2) For mock enclaves, an existing class in the classpath
-         *
-         * For a .so enclave file the function looks in the classpath and search for a file name that matches the pattern
-         * ^.*(simulation|debug|release)\.signed\.so$.
-         *
-         * For mock enclaves, the function searches for classes that extend com.r3.conclave.enclave.Enclave.
-         *
-         * If more than one enclave is found (i.e. multiple modes, or mock + signed enclave) then an exception is thrown.
-         *
-         * For .so enclaves, the mode is derived from the filename but is not taken at face value. The construction of the
-         * EnclaveInstanceInfoImpl in `start` makes sure the mode is correct it terms of the remote attestation.
-         *
-         * @return Pair with the class name and URL (if not a mock enclave) of the enclave found.
-         */
-        private fun findEnclave(): EnclaveScanResult {
-            val classGraph = ClassGraph()
-            val results = ArrayList<EnclaveScanResult>()
-            findNativeEnclaves(classGraph, results)
-            findMockEnclaves(classGraph, results)
-            return getSingleResult(results, null)
-        }
-
-        /**
-         * Performs a search for Intel SGX signed enclave files (.so) using ClassGraph.
-         */
-        private fun findNativeEnclaves(classGraph: ClassGraph, results: MutableList<EnclaveScanResult>) {
-            val nativeSoFilePattern = Pattern.compile("""^(.+)-(simulation|debug|release)\.signed\.so$""")
-
-            classGraph.scan().use {
-                for (resource in it.allResources) {
-                    val pathMatcher = nativeSoFilePattern.matcher(resource.path)
-                    if (pathMatcher.matches()) {
-                        val enclaveClassName = pathMatcher.group(1).replace('/', '.')
-                        val enclaveMode = EnclaveMode.valueOf(pathMatcher.group(2).uppercase())
-                        results += EnclaveScanResult.Native(enclaveClassName, enclaveMode, resource.url)
-                    }
-                }
-            }
-        }
-
-        /**
-         * Performs a search for mock enclave files using ClassGraph. The search is performed by looking for classes that
-         * extend com.r3.conclave.enclave.Enclave.
-         */
-        private fun findMockEnclaves(classGraph: ClassGraph, results: MutableList<EnclaveScanResult>) {
-            classGraph.enableClassInfo().scan().use {
-                for (classInfo in it.getSubclasses("com.r3.conclave.enclave.Enclave")) {
-                    if (!classInfo.isAbstract) {
-                        results += EnclaveScanResult.Mock(classInfo.name)
-                    }
-                }
-            }
-        }
-
-        private fun getSingleResult(results: List<EnclaveScanResult>, className: String?): EnclaveScanResult {
-            when (results.size) {
-                1 -> return results[0]
-                0 -> {
-                    val beginning = if (className != null) "Enclave $className does not exist" else "No enclaves found"
-                    throw IllegalArgumentException(
-                        """$beginning on the classpath. Please make sure the gradle dependency to the enclave project is correctly specified:
-                            |    runtimeOnly project(path: ":enclave project", configuration: mode)
-                            |
-                            |    where:
-                            |      mode is either "release", "debug", "simulation" or "mock"
-                            """.trimMargin()
-                    )
-                }
-                else -> throw IllegalStateException("Multiple enclaves were found: $results")
-            }
-        }
-
-        private fun createEnclaveHost(result: EnclaveScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
+        private fun createEnclaveHost(result: ScanResult, mockConfiguration: MockConfiguration?): EnclaveHost {
             try {
                 return when (result) {
-                    is EnclaveScanResult.Mock -> {
+                    is ScanResult.Mock -> {
                         // Here we do not call checkPlatformEnclaveSupport as mock mode is supported on any platform
                         val enclaveClass = Class.forName(result.enclaveClassName)
                         internalCreateMock(enclaveClass, mockConfiguration)
                     }
-                    is EnclaveScanResult.Native -> {
+                    else -> {
                         checkPlatformEnclaveSupport(result.enclaveMode)
-                        internalCreateNative(result.enclaveMode, result.soFileUrl, result.enclaveClassName)
+                        internalCreateNonMock(result)
                     }
                 }
             } catch (e: EnclaveLoadException) {
@@ -425,30 +312,17 @@ class EnclaveHost private constructor(
                 throw PlatformSupportException(message)
             }
         }
-
-        private val KDSPrivateKeyResponse.size: Int get() {
-            return encryptedPrivateKey.intLengthPrefixSize + kdsAttestationReport.intLengthPrefixSize
-        }
-
-        private fun ByteBuffer.putKdsPrivateKeyResponse(response: KDSPrivateKeyResponse) {
-            putIntLengthPrefixBytes(response.encryptedPrivateKey)
-            putIntLengthPrefixBytes(response.kdsAttestationReport)
-        }
     }
 
     private var kdsConfiguration: KDSConfiguration? = null
     private var fileSystemHandler: FileSystemHandler? = null
 
     private val hostStateManager = StateManager<HostState>(New)
-    private lateinit var adminHandler: AdminHandler
+    private val setEnclaveInfoCallHandler = SetEnclaveInfoCallHandler()
 
     @PotentialPackagePrivate("Access for EnclaveHostMockTest")
-    private lateinit var enclaveMessageHandler: EnclaveMessageHandler
+    private val enclaveMessageHandler = EnclaveMessageHandler()
     private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
-
-    private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
-    private lateinit var signedQuoteHandler: SignedQuoteHandler
-    private lateinit var enclaveInstanceInfoQuoteHandler: EnclaveInstanceInfoQuoteHandler
 
     private lateinit var commandsCallback: Consumer<List<MailCommand>>
 
@@ -473,7 +347,6 @@ class EnclaveHost private constructor(
     val mockEnclave: Any get() = enclaveHandle.mockEnclave
 
     private lateinit var attestationService: AttestationService
-    private lateinit var quotingService: EnclaveQuoteService
 
     @Throws(EnclaveLoadException::class)
     @Synchronized
@@ -537,28 +410,21 @@ class EnclaveHost private constructor(
         if (hostStateManager.state is Started) return
         hostStateManager.checkStateIsNot<Closed> { "The host has been closed." }
 
-        checkAesmAddrEnvVar()
-
         // This can throw IllegalArgumentException which we don't want wrapped in a EnclaveLoadException.
         attestationService = AttestationServiceFactory.getService(enclaveMode, attestationParameters)
-        quotingService = EnclaveQuoteServiceFactory.getService(attestationParameters?.takeIf { enclaveMode.isHardware })
 
         try {
             this.commandsCallback = commandsCallback
-            // Set up a set of channels in and out of the enclave. Each byte array sent/received comes with
-            // a prefixed channel ID that lets us split them out to separate classes.
-            val mux: SimpleMuxingHandler.Connection = enclaveHandle.connection.setDownstream(SimpleMuxingHandler())
-            // The admin handler deserializes keys and other info from the enclave during initialisation.
-            adminHandler = mux.addDownstream(AdminHandler(this))
 
-            // Connect handlers associated with attestation
-            quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
-            signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
-            enclaveInstanceInfoQuoteHandler = mux.addDownstream(EnclaveInstanceInfoQuoteHandler())
+            // Register call handlers
+            enclaveHandle.enclaveInterface.apply {
+                registerCallHandler(HostCallType.GET_ATTESTATION, GetAttestationHandler())
+                registerCallHandler(HostCallType.SET_ENCLAVE_INFO, setEnclaveInfoCallHandler)
+                registerCallHandler(HostCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
+            }
 
-            // The enclave is initialised when it receives its first bytes. We use the request for
-            // the signed quote as that trigger. Therefore we know at this point adminHandler.enclaveInfo is available
-            // for us to query.
+            // Initialise the enclave before fetching enclave instance info
+            enclaveHandle.initialise(attestationParameters)
             updateAttestation()
             log.debug { enclaveInstanceInfo.toString() }
 
@@ -567,22 +433,20 @@ class EnclaveHost private constructor(
                 this.kdsConfiguration = kdsConfiguration
                 // TODO We can avoid this ECALL if we get the enclave to send its persistence key spec when it's
                 //  first initialised.
-                val persistenceKeySpec = adminHandler.requestPersistenceKdsKeySpec()
+                val persistenceKeySpec = enclaveHandle.getKdsPersistenceKeySpec()
                 //  If the enclave is configured also with KDS spec for persistence, we trigger the private key request.
                 //    Note that the kdsConfiguration is also used in the context of KdsPostOffice
                 if (persistenceKeySpec != null) {
-                    requestPersistenceKdsPrivateKey(persistenceKeySpec, kdsConfiguration)
+                    val kdsResponse = executeKdsPrivateKeyRequest(persistenceKeySpec, kdsConfiguration)
+                    enclaveHandle.setKdsPersistenceKey(kdsResponse)
                 }
             }
-
-            // This handler wires up callUntrustedHost -> callEnclave and mail delivery.
-            enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
 
             if (enclaveFileSystemFile != null) {
                 log.info("Setting up persistent enclave file system...")
             }
             fileSystemHandler = prepareFileSystemHandler(enclaveFileSystemFile)
-            adminHandler.sendOpen(sealedState)
+            enclaveHandle.startEnclave(sealedState)
             if (enclaveFileSystemFile != null) {
                 log.info("Setup of the file system completed successfully.")
             }
@@ -594,7 +458,7 @@ class EnclaveHost private constructor(
     }
 
     private fun prepareFileSystemHandler(enclaveFileSystemFile: Path?): FileSystemHandler? {
-        return if (enclaveMode != EnclaveMode.MOCK) {
+        return if (isFileSystemSupported()) {
             val fileSystemFilePaths = if (enclaveFileSystemFile != null) listOf(enclaveFileSystemFile) else emptyList()
             FileSystemHandler(fileSystemFilePaths, enclaveMode)
         } else {
@@ -602,12 +466,10 @@ class EnclaveHost private constructor(
         }
     }
 
-    private fun requestPersistenceKdsPrivateKey(keySpec: KDSKeySpec, kdsConfiguration: KDSConfiguration) {
-        val kdsResponse = executeKdsPrivateKeyRequest(keySpec, kdsConfiguration)
-        adminHandler.sendKdsPrivateKeyResponseToEnclave(
-            kdsResponse,
-            HostToEnclave.PERSISTENCE_KDS_PRIVATE_KEY_RESPONSE
-        )
+    private fun isFileSystemSupported(): Boolean {
+        //  This filesystem implementation is only supported in SIMULATION, DEBUG, RELEASE mode in Graal VM mode only
+        // TODO: Fix this once we have filesystem supported in Gramine
+        return enclaveMode != EnclaveMode.MOCK && enclaveHandle is NativeEnclaveHandle
     }
 
     private fun executeKdsPrivateKeyRequest(
@@ -666,27 +528,16 @@ class EnclaveHost private constructor(
         updateEnclaveInstanceInfo(attestation)
     }
 
-    private fun checkAesmAddrEnvVar() {
-        val sgxAesmAddrEnvVar = System.getenv(ENV_VAR_SGX_AESM_ADDR)
-        if (enclaveMode.isHardware)
-            check(sgxAesmAddrEnvVar == null) { "Cannot start the enclave with the environment variable $ENV_VAR_SGX_AESM_ADDR set. Please unset it and try again." }
-        else if (sgxAesmAddrEnvVar != null) {
-            log.warn("Enclave will not be able to start-up in debug or release mode while $ENV_VAR_SGX_AESM_ADDR is set.")
-        }
-    }
-
     private fun getAttestation(): Attestation {
-        val quotingEnclaveTargetInfo = quotingService.initializeQuote()
-        log.debug { "Quoting enclave's target info $quotingEnclaveTargetInfo" }
-        val signedQuote = enclaveInstanceInfoQuoteHandler.getQuote(quotingEnclaveTargetInfo)
+        val signedQuote = enclaveHandle.getEnclaveInstanceInfoQuote()
         log.debug { "Got quote $signedQuote" }
         return attestationService.attestQuote(signedQuote)
     }
 
     private fun updateEnclaveInstanceInfo(attestation: Attestation) {
         _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
-            adminHandler.enclaveInfo.signatureKey,
-            adminHandler.enclaveInfo.encryptionKey,
+            setEnclaveInfoCallHandler.enclaveInfo.signatureKey,
+            setEnclaveInfoCallHandler.enclaveInfo.encryptionKey,
             attestation
         )
     }
@@ -863,7 +714,7 @@ class EnclaveHost private constructor(
         if (hostStateManager.state !is Started) return
         try {
             // Ask the enclave to close so all its resources are released before the enclave is destroyed
-            adminHandler.sendClose()
+            enclaveHandle.stopEnclave()
 
             // Destroy the enclave
             enclaveHandle.destroy()
@@ -876,80 +727,30 @@ class EnclaveHost private constructor(
 
     private class EnclaveInfo(val signatureKey: PublicKey, val encryptionKey: Curve25519PublicKey)
 
-    /** Deserializes keys and other info from the enclave during initialisation. */
-    private class AdminHandler(private val host: EnclaveHost) : Handler<AdminHandler> {
-        private lateinit var sender: Sender
+    /**
+     * Handler for servicing attestation requests from the enclave.
+     */
+    private inner class GetAttestationHandler : CallHandler {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer {
+            val attestationBytes = writeData { _enclaveInstanceInfo!!.attestation.writeTo(this) }
+            return ByteBuffer.wrap(attestationBytes)
+        }
+    }
 
+    /**
+     * Handler for receiving enclave info from the enclave on initialisation.
+     * TODO: It would be better to return enclave info from the initialise enclave call
+     *       but that doesn't work in mock mode at the moment.
+     */
+    private inner class SetEnclaveInfoCallHandler : CallHandler {
         private var _enclaveInfo: EnclaveInfo? = null
         val enclaveInfo: EnclaveInfo get() = checkNotNull(_enclaveInfo) { "Not received enclave info" }
 
-        private var persistenceKdsKeySpec: KDSKeySpec? = null
-
-        private val messageTypes = EnclaveToHost.values()
-
-        override fun connect(upstream: Sender): AdminHandler = this.also { sender = upstream }
-
-        override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-            when (messageTypes[input.get().toInt()]) {
-                EnclaveToHost.ENCLAVE_INFO -> onEnclaveInfo(input)
-                EnclaveToHost.ATTESTATION -> onAttestation()
-                EnclaveToHost.PERSISTENCE_KDS_KEY_SPEC_RESPONSE -> onPersistenceKdsKeySpecResponse(input)
-            }
-        }
-
-        private fun onEnclaveInfo(input: ByteBuffer) {
-            check(_enclaveInfo == null) { "Already received enclave info" }
-            val signatureKey = signatureScheme.decodePublicKey(input.getBytes(44))
-            val encryptionKey = Curve25519PublicKey(input.getBytes(32))
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            val signatureKey = signatureScheme.decodePublicKey(parameterBuffer.getBytes(44))
+            val encryptionKey = Curve25519PublicKey(parameterBuffer.getBytes(32))
             _enclaveInfo = EnclaveInfo(signatureKey, encryptionKey)
-        }
-
-        private fun onAttestation() {
-            val attestationBytes = writeData { host._enclaveInstanceInfo!!.attestation.writeTo(this) }
-            sendToEnclave(HostToEnclave.ATTESTATION, attestationBytes.size) { buffer ->
-                buffer.put(attestationBytes)
-            }
-        }
-
-        private fun onPersistenceKdsKeySpecResponse(input: ByteBuffer) {
-            check(persistenceKdsKeySpec == null)
-            persistenceKdsKeySpec = getKdsKeySpec(input)
-        }
-
-        fun sendOpen(sealedState: ByteArray?) {
-            val payloadSize = nullableSize(sealedState) { it.size }
-            sendToEnclave(HostToEnclave.OPEN, payloadSize) { buffer ->
-                buffer.putNullable(sealedState) { put(it) }
-            }
-        }
-
-        fun sendClose() {
-            sendToEnclave(HostToEnclave.CLOSE, 0) { }
-        }
-
-        fun requestPersistenceKdsKeySpec(): KDSKeySpec? {
-            sendToEnclave(HostToEnclave.PERSISTENCE_KDS_KEY_SPEC_REQUEST, 0) { }
-            return persistenceKdsKeySpec
-        }
-
-        fun sendKdsPrivateKeyResponseToEnclave(response: KDSPrivateKeyResponse, kdsResponseType: HostToEnclave) {
-            sendToEnclave(kdsResponseType, response.size) { buffer ->
-                buffer.putKdsPrivateKeyResponse(response)
-            }
-        }
-
-        private fun sendToEnclave(type: HostToEnclave, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
-            sender.send(1 + payloadSize) { buffer ->
-                buffer.put(type.ordinal.toByte())
-                payload(buffer)
-            }
-        }
-
-        private fun getKdsKeySpec(input: ByteBuffer): KDSKeySpec {
-            val name = input.getIntLengthPrefixString()
-            val masterKeyType = MasterKeyType.fromID(input.get().toInt())
-            val policyConstraint = input.getRemainingString()
-            return KDSKeySpec(name, masterKeyType, policyConstraint)
+            return null
         }
     }
 
@@ -965,75 +766,8 @@ class EnclaveHost private constructor(
         }
     }
 
-    /**
-     * Handler for servicing requests from the enclave for signed quotes.
-     */
-    private inner class SignedQuoteHandler : Handler<SignedQuoteHandler> {
-        private lateinit var sender: Sender
-
-        override fun connect(upstream: Sender): SignedQuoteHandler {
-            sender = upstream
-            return this
-        }
-
-        override fun onReceive(connection: SignedQuoteHandler, input: ByteBuffer) {
-            val report = Cursor.slice(SgxReport, input)
-            val signedQuote = quotingService.retrieveQuote(report)
-            sender.send(signedQuote.size) { buffer -> buffer.put(signedQuote.buffer) }
-        }
-    }
-
-    /**
-     * Handler for servicing requests from the enclave for quoting info.
-     */
-    private inner class QuotingEnclaveInfoHandler : Handler<QuotingEnclaveInfoHandler> {
-        private lateinit var sender: Sender
-
-        override fun connect(upstream: Sender): QuotingEnclaveInfoHandler {
-            sender = upstream
-            return this
-        }
-
-        override fun onReceive(connection: QuotingEnclaveInfoHandler, input: ByteBuffer) {
-            val quotingEnclaveInfo = quotingService.initializeQuote()
-            sender.send(quotingEnclaveInfo.size) { buffer -> buffer.put(quotingEnclaveInfo.buffer) }
-        }
-    }
-
-    /**
-     * Handler for retrieving a report from the enclave for enclave instance info.
-     */
-    private inner class EnclaveInstanceInfoQuoteHandler : Handler<EnclaveInstanceInfoQuoteHandler> {
-        private lateinit var sender: Sender
-
-        private val quote = ThreadLocal<ByteCursor<SgxSignedQuote>>()
-
-        override fun connect(upstream: Sender): EnclaveInstanceInfoQuoteHandler {
-            sender = upstream
-            return this
-        }
-
-        override fun onReceive(connection: EnclaveInstanceInfoQuoteHandler, input: ByteBuffer) {
-            check(quote.get() == null)
-            quote.set(Cursor.copy(SgxSignedQuote, input))
-        }
-
-        fun getQuote(target: ByteCursor<SgxTargetInfo>): ByteCursor<SgxSignedQuote> {
-            try {
-                sender.send(target.size) { buffer ->
-                    buffer.put(target.buffer)
-                }
-                return checkNotNull(quote.get())
-            } finally {
-                quote.remove()
-            }
-        }
-    }
-
     @PotentialPackagePrivate("Access for EnclaveHostMockTest")
-    private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
-        private lateinit var sender: Sender
-
+    private inner class EnclaveMessageHandler : CallHandler {
         private val callTypeValues = InternalCallType.values()
         @PotentialPackagePrivate("Access for EnclaveHostMockTest")
         private val threadIDToTransaction = ConcurrentHashMap<Long, Transaction>()
@@ -1042,20 +776,19 @@ class EnclaveHost private constructor(
         // private key).
         private val seenKdsKeySpecs = ConcurrentHashMap.newKeySet<KDSKeySpec>()
 
-        override fun connect(upstream: Sender): EnclaveMessageHandler = this.also { sender = upstream }
-
-        override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
-            val type = callTypeValues[input.get().toInt()]
-            val threadID = input.getLong()
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            val type = callTypeValues[parameterBuffer.get().toInt()]
+            val threadID = parameterBuffer.getLong()
             val transaction = threadIDToTransaction.getValue(threadID)
             val callStateManager = transaction.stateManager
             val intoEnclaveState = callStateManager.checkStateIs<IntoEnclave>()
             when (type) {
-                MAIL -> onMail(transaction, input)
-                UNTRUSTED_HOST -> onUntrustedHost(intoEnclaveState, threadID, input)
-                CALL_RETURN -> onCallReturn(callStateManager, input)
-                SEALED_STATE -> onSealedState(transaction, input)
+                MAIL -> onMail(transaction, parameterBuffer)
+                UNTRUSTED_HOST -> onUntrustedHost(intoEnclaveState, threadID, parameterBuffer)
+                CALL_RETURN -> onCallReturn(callStateManager, parameterBuffer)
+                SEALED_STATE -> onSealedState(transaction, parameterBuffer)
             }
+            return null
         }
 
         private fun onMail(transaction: Transaction, input: ByteBuffer) {
@@ -1176,12 +909,12 @@ class EnclaveHost private constructor(
                 body(threadID)
             } catch (t: Throwable) {
                 throw when (t) {
+                    // No need to wrap an Enclave exception inside another Enclave exception
+                    is EnclaveException -> t
                     // Unchecked exceptions propagate as is.
                     is RuntimeException, is Error -> t
                     // MailDecryptionException needs to propagate as is for deliverMail.
                     is MailDecryptionException -> t
-                    // No need to wrap an Enclave exception inside another Enclave exception
-                    is EnclaveException -> t
                     else -> EnclaveException(null, t)
                 }
             } finally {
@@ -1210,11 +943,12 @@ class EnclaveHost private constructor(
             payloadSize: Int,
             payload: (ByteBuffer) -> Unit
         ) {
-            sender.send(1 + Long.SIZE_BYTES + payloadSize) { buffer ->
-                buffer.put(type.ordinal.toByte())
-                buffer.putLong(threadID)
-                payload(buffer)
+            val buffer = ByteBuffer.allocate(1 + Long.SIZE_BYTES + payloadSize).apply {
+                put(type.ordinal.toByte())
+                putLong(threadID)
+                payload(this)
             }
+            enclaveHandle.sendMessageHandlerCommand(buffer)
         }
     }
 
@@ -1228,23 +962,6 @@ class EnclaveHost private constructor(
         object New : HostState()
         object Started : HostState()
         object Closed : HostState()
-    }
-
-    private sealed class EnclaveScanResult {
-        class Mock(val enclaveClassName: String) : EnclaveScanResult() {
-            override fun toString(): String = "mock $enclaveClassName"
-        }
-
-        class Native(
-            val enclaveClassName: String,
-            val enclaveMode: EnclaveMode,
-            val soFileUrl: URL
-        ) : EnclaveScanResult() {
-            init {
-                require(enclaveMode != EnclaveMode.MOCK)
-            }
-            override fun toString(): String = "${enclaveMode.name.lowercase()} $enclaveClassName"
-        }
     }
 }
 

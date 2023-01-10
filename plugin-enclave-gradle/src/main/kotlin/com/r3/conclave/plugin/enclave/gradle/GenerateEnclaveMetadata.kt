@@ -1,20 +1,31 @@
 package com.r3.conclave.plugin.enclave.gradle
 
 import com.r3.conclave.utilities.internal.toHexString
+import com.r3.conclave.common.EnclaveMode
+import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.internal.Cursor
+import com.r3.conclave.common.internal.SgxCssBody.enclaveHash
+import com.r3.conclave.common.internal.SgxEnclaveCss
+import com.r3.conclave.common.internal.SgxEnclaveCss.body
+import com.r3.conclave.common.internal.SgxEnclaveCss.key
+import com.r3.conclave.common.internal.mrsigner
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import org.gradle.internal.os.OperatingSystem
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.readBytes
 
 open class GenerateEnclaveMetadata @Inject constructor(
     objects: ObjectFactory,
     private val plugin: GradleEnclavePlugin,
-    private val buildType: BuildType,
+    private val enclaveMode: EnclaveMode,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
+
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
 
@@ -24,16 +35,23 @@ open class GenerateEnclaveMetadata @Inject constructor(
     @get:OutputFile
     val mrenclaveOutputFile: RegularFileProperty = objects.fileProperty()
 
-    override fun action() {
-        val metadataFile = temporaryDir.toPath().resolve("enclave_metadata.txt")
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
-        if (!OperatingSystem.current().isLinux) {
+    override fun action() {
+        // TODO use -cssfile as it produces the binary SIGSTRUCT which can be read directly using SgxMetadataEnclaveCss.
+        //  See TestUtils.getEnclaveSigstruct in the integration tests.
+        val metadataFile = temporaryDir.toPath().resolve("enclave_css.bin")
+
+        if (linuxExec.buildInDocker(buildInDocker)) {
             try {
                 linuxExec.exec(
                     listOf<String>(
                         plugin.signToolPath().absolutePathString(), "dump",
                         "-enclave", inputSignedEnclave.asFile.get().absolutePath,
-                        "-dumpfile", metadataFile.toAbsolutePath().toString()
+                        // We don't need this but sgx_sign still requires it to be specified.
+                        "-dumpfile", "/dev/null",
+                        "-cssfile", metadataFile.absolutePathString()
                     )
                 )
             } finally {
@@ -43,24 +61,24 @@ open class GenerateEnclaveMetadata @Inject constructor(
             commandLine(
                 plugin.signToolPath().absolutePathString(), "dump",
                 "-enclave", inputSignedEnclave.asFile.get(),
-                "-dumpfile", metadataFile
+                // We don't need this but sgx_sign still requires it be specified.
+                "-dumpfile", "/dev/null",
+                "-cssfile", metadataFile.absolutePathString()
             )
         }
 
-        val enclaveMetadata = EnclaveMetadata.parseMetadataFile(metadataFile)
+        val enclaveMetadata = Cursor.wrap(SgxEnclaveCss, metadataFile.readBytes())
 
-        mrsignerOutputFile.asFile.get().writeText(enclaveMetadata.mrsigner.bytes.toHexString().uppercase())
-        mrenclaveOutputFile.asFile.get().writeText(enclaveMetadata.mrenclave.bytes.toHexString().uppercase())
+        val mrsigner = enclaveMetadata[key].mrsigner
+        val mrencalve = SHA256Hash.get(enclaveMetadata[body][enclaveHash].read())
 
-        logger.lifecycle("Enclave code hash:   ${enclaveMetadata.mrenclave}")
-        logger.lifecycle("Enclave code signer: ${enclaveMetadata.mrsigner}")
+        mrsignerOutputFile.asFile.get().writeText(mrsigner.bytes.toHexString().uppercase())
+        mrenclaveOutputFile.asFile.get().writeText(mrencalve.bytes.toHexString().uppercase())
 
-        val buildTypeString = buildType.toString().uppercase()
-        val buildSecurityString = when(buildType) {
-            BuildType.Release -> "SECURE"
-            else -> "INSECURE"
-        }
+        logger.lifecycle("Enclave code hash:   ${SHA256Hash.get(enclaveMetadata[body][enclaveHash].read())}")
+        logger.lifecycle("Enclave code signer: ${enclaveMetadata[key].mrsigner}")
 
-        logger.lifecycle("Enclave mode:        $buildTypeString ($buildSecurityString)")
+        val buildSecurityString = if (enclaveMode == EnclaveMode.RELEASE) "SECURE" else "INSECURE"
+        logger.lifecycle("Enclave mode:        $enclaveMode ($buildSecurityString)")
     }
 }

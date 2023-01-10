@@ -1,5 +1,7 @@
 package com.r3.conclave.common.internal
 
+import com.r3.conclave.common.SHA256Hash
+import com.r3.conclave.common.internal.SgxCssKey.modulus
 import com.r3.conclave.common.internal.SgxQeCertData.data
 import com.r3.conclave.common.internal.SgxQeCertData.type
 import com.r3.conclave.common.internal.SgxQuote.signType
@@ -617,7 +619,7 @@ object SgxQeCertData : VariableStruct() {
 }
 
 fun ByteCursor<SgxQeCertData>.toPckCertPath(): CertPath {
-    check(this[type].read() == 5) { "Not a PCK cert path" }
+    check(this[type].read() == 5) { "Not a PCK cert path: ${this[type].read()}" }
     // There's a trailing byte which we ignore
     return AttestationUtils.parsePemCertPath(this[data].read(), trailingBytes = 1)
 }
@@ -637,7 +639,10 @@ object SgxMetadataDirectory : Struct() {
     val directory_size = field(UInt32())
 }
 
-object SgxMetadataCssHeader : Struct() {
+/**
+ * @see `css_header_t`
+ */
+object SgxCssHeader : Struct() {
     @JvmField
     val header = field(FixedBytes(12))
     @JvmField
@@ -655,7 +660,10 @@ object SgxMetadataCssHeader : Struct() {
     val  reserved = field(ReservedBytes(84))
 }
 
-object SgxMetadataCssKey : Struct() {
+/**
+ * @see `css_key_t`
+ */
+object SgxCssKey : Struct() {
     @JvmField
     val modulus = field(FixedBytes(SE_KEY_SIZE))
     @JvmField
@@ -664,7 +672,12 @@ object SgxMetadataCssKey : Struct() {
     val signature = field(FixedBytes(SE_KEY_SIZE))
 }
 
-object SgxMetadataCssBody : Struct() {
+val ByteCursor<SgxCssKey>.mrsigner: SHA256Hash get() = SHA256Hash.hash(this[modulus].bytes)
+
+/**
+ * @see `css_body_t`
+ */
+object SgxCssBody : Struct() {
     @JvmField
     val miscSelect = field(SgxMiscSelect)
     @JvmField
@@ -691,7 +704,10 @@ object SgxMetadataCssBody : Struct() {
     val IsvSvn = field(SgxIsvSvn)
 }
 
-object SgxMetadataCssBuffer : Struct() {
+/**
+ * @see `css_buffer_t`
+ */
+object SgxCssBuffer : Struct() {
     @Suppress("unused")
     @JvmField
     val reserved = field(ReservedBytes(12))
@@ -701,15 +717,20 @@ object SgxMetadataCssBuffer : Struct() {
     val q2 = field(FixedBytes(SE_KEY_SIZE))
 }
 
-object SgxMetadataEnclaveCss : Struct() {
+/**
+ * This is also known as the `SIGSTRUCT`.
+ *
+ * @see `enclave_css_t`
+ */
+object SgxEnclaveCss : Struct() {
     @JvmField
-    val header = field(SgxMetadataCssHeader)
+    val header = field(SgxCssHeader)
     @JvmField
-    val key = field(SgxMetadataCssKey)
+    val key = field(SgxCssKey)
     @JvmField
-    val body = field(SgxMetadataCssBody)
+    val body = field(SgxCssBody)
     @JvmField
-    val buffer = field(SgxMetadataCssBuffer)
+    val buffer = field(SgxCssBuffer)
 }
 
 object SgxEnclaveMetadata: Struct() {
@@ -736,7 +757,7 @@ object SgxEnclaveMetadata: Struct() {
     @JvmField
     val attributes = field(SgxAttributes)
     @JvmField
-    val enclaveCss = field(SgxMetadataEnclaveCss)
+    val enclaveCss = field(SgxEnclaveCss)
     @JvmField
     val dataDirectory = field(SgxMetadataDirectory)
     @JvmField

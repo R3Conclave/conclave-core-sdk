@@ -118,8 +118,8 @@ interface EnclaveMail : EnclaveMailHeader {
  * enclave. This means it can detect dropped or reordered messages and thus the ordering is preserved.
  *
  * However for this to work, the same post office instance must be used for the same sender key and topic pair. This
- * means there can only be one [PostOffice] instance per (destination, sender, topic) triple. It's up the user to make
- * sure this is the case.
+ * means there can only be one [PostOffice] instance per (destination, sender, topic) triple. It's up to the user to
+ * make sure this is the case.
  *
  * To make it make it more difficult for an adversary to guess the contents of the mail just by observing their sizes,
  * the post office pads the mail to a minimum size. By default it uses a moving average of the previous mail created.
@@ -130,7 +130,7 @@ interface EnclaveMail : EnclaveMailHeader {
  * needs to be done as mail is automatically decrypted.
  *
  * When inside an enclave instances can only be created using one of the [com.r3.conclave.enclave.Enclave.postOffice] methods, and cannot be
- * created using [PostOffice.create] or [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice]. This is to ensure the enclave's
+ * created using [create] or [com.r3.conclave.common.EnclaveInstanceInfo.createPostOffice]. This is to ensure the enclave's
  * private key is correctly applied as the sender.
  *
  * [PostOffice] instances are not thread-safe and external synchronization is required if they are accessed from
@@ -287,8 +287,8 @@ abstract class PostOffice(
 
     /**
      * Decodes and decrypts the mail with [senderPrivateKey] and verifies that the authenticated sender
-     * ([EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html))
-     * matches the [destinationPublicKey].
+     * ([EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
+     * matches the [destinationPublicKey]).
      *
      * @param encryptedEnclaveMail The encrypted mail bytes, produced by the sender's [encryptMail].
      *

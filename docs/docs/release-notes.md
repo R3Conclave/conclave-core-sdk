@@ -1,11 +1,21 @@
 # Release notes
 
+## 1.4
+
+1. Intel SGX SDK has been updated to 2.18. This provides bug fixes, security updates, and other improvements. See the
+    [SGX SDK 2.18 release notes](https://github.com/intel/linux-sgx/releases/tag/sgx_2.18) for more details.
+2. EPID attestation protocol has been deprecated, and it will be removed in an upcoming release. You should use DCAP instead.
+3. For security reasons, the way [enclave constraints](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html)
+   are evaluated has changed slightly. From now on, if a client sets the security level to `INSECURE`, it will not pass
+   for `STALE` or `SECURE` enclaves. This is to prevent the client from accidently communicating with a production
+   enclave during development or testing.
+
 ## 1.3.1
 
 1. To make deploying enclaves built with Conclave easier, files containing the enclave code hash and signer are now
-   generated when an enclave is built. See [here](enclave-configuration.md#enclave-build-process) for more information.
+  generated when an enclave is built. See [here](enclave-configuration.md#enclave-build-process) for more information.
 2. Added support for the Intel PCCS (Provisioning certificate caching service) and Intel DCAP plugin. See
-   [here](dcap.md#intel-dcap-client--pccs) for more information.
+  [here](dcap.md#intel-dcap-client--pccs) for more information.
 
 ## 1.3
 

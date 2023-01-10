@@ -6,25 +6,16 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Internal
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.Paths
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.OutputFile
 import java.util.*
 import javax.inject.Inject
 
 open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory) : ConclaveTask() {
-    @Input
+    @get:Nested
     val conclaveExtension: Property<ConclaveExtension> = objects.property(ConclaveExtension::class.java)
 
-    @Input
-    val resourceDirectory: Property<String> = objects.property(String::class.java)
-
-    @Input
-    val mainClassName: Property<String> = objects.property(String::class.java)
-
-    @get:Internal
+    @get:OutputFile
     val enclavePropertiesFile: RegularFileProperty = objects.fileProperty()
 
     private fun throwKDSPropertyMissingException(propertyName: String) {
@@ -35,25 +26,18 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
         )
     }
 
-    private fun kdsEnabled(): Boolean {
-        // If any of the kds parameters are specified, assume that the user wants to use the KDS
-        // TODO Find a better way of detecting "kds {...}" in the users build.gradle
-        return conclaveExtension.get().kds.isPresent
-    }
-
     private fun applyKDSConfig(properties: SortedMap<String, String>) {
         // If any of the kds parameters are specified, assume that the user wants to use the KDS
         // TODO Find a better way of detecting "kds {...}" in the users build.gradle
-        val kdsEnabled = kdsEnabled()
+        val kdsExtension = conclaveExtension.get().kds
+        val kdsEnabled = kdsExtension.isPresent
         properties["kds.configurationPresent"] = kdsEnabled.toString()
         if (!kdsEnabled) {
             return
         }
 
-        val conclave = this.conclaveExtension.get()
-
-        if (conclave.kds.kdsEnclaveConstraint.isPresent) {
-            val kdsEnclaveConstraintString = conclave.kds.kdsEnclaveConstraint.get().toString()
+        if (kdsExtension.kdsEnclaveConstraint.isPresent) {
+            val kdsEnclaveConstraintString = kdsExtension.kdsEnclaveConstraint.get().toString()
             try {
                 EnclaveConstraint.parse(kdsEnclaveConstraintString)
             } catch (e: Exception) {
@@ -66,12 +50,12 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
 
         val persistenceKeySpecPropertyName = "kds.persistenceKeySpec.configurationPresent"
 
-        if (conclave.kds.keySpec.isPresent) {
+        if (kdsExtension.keySpec.isPresent) {
             logger.warn("kds.keySpec has been replaced by kds.persistenceKeySpec and it is now deprecated")
-            applyKDSConfigPersistenceKeySpec(properties, conclave.kds.keySpec)
+            applyKDSConfigPersistenceKeySpec(properties, kdsExtension.keySpec)
             properties[persistenceKeySpecPropertyName] = "true"
-        } else if (conclave.kds.persistenceKeySpec.isPresent) {
-            applyKDSConfigPersistenceKeySpec(properties, conclave.kds.persistenceKeySpec)
+        } else if (kdsExtension.persistenceKeySpec.isPresent) {
+            applyKDSConfigPersistenceKeySpec(properties, kdsExtension.persistenceKeySpec)
             properties[persistenceKeySpecPropertyName] = "true"
         } else {
             properties[persistenceKeySpecPropertyName] = "false"
@@ -120,8 +104,8 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
     }
 
     override fun action() {
-        val propertiesResourceDir = Paths.get(mainClassName.get().replace('.', '/')).parent
-        val propertiesFile = Paths.get(resourceDirectory.get(), propertiesResourceDir.toString(), "enclave.properties")
+        // TODO Use inputs.properties to enumerate all property values and automatically dump them into the
+        //  properties file
         val properties = TreeMap<String, String>()
 
         val conclave = conclaveExtension.get()
@@ -137,13 +121,13 @@ open class GenerateEnclaveProperties @Inject constructor(objects: ObjectFactory)
 
         applyKDSConfig(properties)
 
-        Files.createDirectories(propertiesFile.parent)
-        FileOutputStream(propertiesFile.toFile()).use {
-            it.write("# Build time enclave properties\n".toByteArray())
+        enclavePropertiesFile.get().asFile.bufferedWriter().use { writer ->
+            writer.write("# Build time enclave properties")
+            writer.newLine()
             for ((key, value) in properties) {
-                it.write("$key=$value\n".toByteArray())
+                writer.write("$key=$value")
+                writer.newLine()
             }
         }
-        enclavePropertiesFile.set(propertiesFile.toFile())
     }
 }

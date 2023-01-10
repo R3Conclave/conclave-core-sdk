@@ -2,8 +2,11 @@ package com.r3.conclave.enclave.internal
 
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.internal.*
+import com.r3.conclave.common.internal.attestation.Attestation
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import java.nio.ByteBuffer
+import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 
 abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: EnclaveKdsConfig?) {
@@ -28,7 +31,7 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
         // Load enclave properties or optionally get defaults, throw an error if this was unsuccessful
         @JvmStatic
         protected fun loadEnclaveProperties(enclaveClass: Class<*>, allowDefaults: Boolean): Properties {
-            val propertyStream = enclaveClass.getResourceAsStream("enclave.properties")
+            val propertyStream = enclaveClass.getResourceAsStream(PluginUtils.ENCLAVE_PROPERTIES)
             val properties = Properties()
             propertyStream?.use {
                 properties.load(it)
@@ -42,6 +45,8 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
     }
 
     abstract val enclaveMode: EnclaveMode
+
+    abstract val hostInterface: CallInterface<HostCallType, EnclaveCallType>
 
     // Enclave properties from build system
     open val productID: Int = enclaveProperties.getProperty("productID").toInt()
@@ -64,6 +69,17 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
         targetInfo: ByteCursor<SgxTargetInfo>?,
         reportData: ByteCursor<SgxReportData>?
     ): ByteCursor<SgxReport>
+
+    /**
+     * Get a [SgxSignedQuote] quote from the host.
+     * @param targetInfo Optional information of the target enclave if the report is to be used as part of local
+     * attestation. An example is during quoting when the report is sent to the Quoting Enclave for signing.
+     * @param reportData Optional data to be included in the report. If null the data area of the report will be 0.
+     */
+    abstract fun getSignedQuote(
+        targetInfo: ByteCursor<SgxTargetInfo>?,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxSignedQuote>
 
     /**
      * Encrypt and authenticate the given [PlaintextAndEnvelope] using AES-GCM. The key used is unique to the enclave.
@@ -116,6 +132,38 @@ abstract class EnclaveEnvironment(enclaveProperties: Properties, kdsConfig: Encl
         inMemoryMountPath: String,
         persistentMountPath: String,
         encryptionKey: ByteArray)
+
+    /** Call interface functions */
+    /**
+     * Send enclave info to the host.
+     * TODO: It would be better to return enclave info from the initialise enclave call
+     *       but that doesn't work in mock mode at the moment.
+     */
+    fun setEnclaveInfo(signatureKey: PublicKey, encryptionKeyPair: KeyPair) {
+        val encodedSigningKey = signatureKey.encoded                    // 44 bytes
+        val encodedEncryptionKey = encryptionKeyPair.public.encoded     // 32 bytes
+        val payloadSize = encodedSigningKey.size + encodedEncryptionKey.size
+        val buffer = ByteBuffer.allocate(payloadSize).apply {
+            put(encodedSigningKey)
+            put(encodedEncryptionKey)
+        }
+        hostInterface.executeOutgoingCall(HostCallType.SET_ENCLAVE_INFO, buffer)
+    }
+
+    /**
+     * Request an attestation from the host.
+     */
+    fun getAttestation(): Attestation {
+        val buffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_ATTESTATION)
+        return Attestation.getFromBuffer(buffer)
+    }
+
+    /**
+     * Send a response to the host enclave message handler.
+     */
+    fun sendEnclaveMessageResponse(response: ByteBuffer) {
+        hostInterface.executeOutgoingCall(HostCallType.CALL_MESSAGE_HANDLER, response)
+    }
 }
 
 /**

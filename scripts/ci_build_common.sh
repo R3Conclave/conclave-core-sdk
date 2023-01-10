@@ -7,35 +7,13 @@ code_docker_dir=${code_host_dir}
 
 source ${code_host_dir}/containers/scripts/common.sh
 
-conclave_graal_version=$(grep -w "conclave_graal_version =" ./versions.gradle | cut -d '=' -f 2 | sed "s/[ ']//g")
-artifact_path=$conclave_graal_group_id/$conclave_graal_artifact_id/$conclave_graal_version/$conclave_graal_artifact_id-$conclave_graal_version.tar.gz.sha512
-url="https://software.r3.com/artifactory/conclave-maven/${artifact_path}"
-
-conclave_graal_sha512sum=$(curl -SLf $url)
-
-# Generate the docker image tag based on the contents inside the containers module
-# Please be sure that any script that might change the final docker container image
-# is inside the folder containers/scripts. Otherwise, the tag generated won't be
-# correct and you run the risk of overwriting existing docker images that are used
-# by older release branches. Keep in mind that temporary or build directories should be excluded
-# The following code generates the hash based on the contents of a directory and the version of graal used.
-# This hash takes into account the contents of each file inside the directory and subdirectories
-# The cut command removes the dash at the end.
-# All subdirectories with name build and download and hidden files are excluded. Please be sure that any file
-# that is not tracked by git should not be included in this hash.
-# In order to allow ci_build_publish_docker_images to detect automatically the new version of graal, the hash generated
-# must include the conclave_graal sha512sum as well.
-pushd ${code_host_dir}
-containers_dir_hash=$(find ./containers \( ! -regex '.*/\..*\|.*/build/.*\|.*/downloads/.*' \) -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f1)
-docker_image_tag=$(echo $containers_dir_hash-$conclave_graal_sha512sum | sha256sum | cut -d ' ' -f1)
-popd
-
-# Docker container images repository
-container_image_repo=conclave-docker-dev.software.r3.com/com.r3.conclave
+container_image_repo="conclave-docker-dev.software.r3.com/com.r3.conclave"
+docker_image_tag=$(${code_host_dir}/scripts/genDockerImageTag.sh)
 
 # Docker container images
 container_image_aesmd=$container_image_repo/aesmd:$docker_image_tag
 container_image_conclave_build=$container_image_repo/conclave-build:$docker_image_tag
+container_image_integration_tests_build=$container_image_repo/integration-tests-build:$docker_image_tag
 container_image_sdk_build=$container_image_repo/sdk-build:$docker_image_tag
 
 mkdir -p $HOME/.gradle
@@ -45,15 +23,22 @@ mkdir -p $HOME/.mx
 mkdir -p $HOME/.container
 
 # If running on a Linux host with SGX properly installed and configured,
-# tunnel through the SGX driver and AES daemon socket. This means you can
+# tunnel through the SGX driver and AESM daemon socket. This means you can
 # still run the devenv on a non-SGX host or a Mac without it breaking.
 sgx_hardware_flags=()
-if [ -e /dev/isgx ]; then
-    sgx_hardware_flags=("--device=/dev/isgx" "-v" "/var/run/aesmd:/var/run/aesmd")
-elif [ -e /dev/sgx_enclave ]; then  # DCAP
-    sgx_hardware_flags=("--device=/dev/sgx_enclave" "--device=/dev/sgx_provision" "-v" "/var/run/aesmd:/var/run/aesmd")
-elif [ -e /dev/sgx/enclave ]; then  # Legacy DCAP driver location
-    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/var/run/aesmd:/var/run/aesmd")
+
+if [ -e /dev/sgx/enclave ] && [ -e /dev/sgx_enclave ]; then
+    # /dev/sgx_enclave (and /dev/sgx_provision) is the current path used by the new in-kernel driver, available in Linux Kernel 5.11 >= and recommended by Intel:
+    #    https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/driver/linux/README.md
+    # /dev/sgx/enclave is the path used by the old out-of-kernel driver, to be used with Linux Kernel < 5.11.
+    # To keep backward compatibility, the path /dev/sgx/enclave is also available when the in-kernel driver is used, but in this case it just represents a symbolic link pointing to /dev/sgx_enclave.
+    # We do not use out-of-kernel driver in Conclave and therefore, when /dev/sgx/enclave is available alone (i.e. not as a symbolic link), we consider the device as not supported by Conclave
+    sgx_hardware_flags=("--device=/dev/sgx/enclave" "--device=/dev/sgx/provision" "-v" "/dev/sgx_provision:/dev_provision" "-v" "/dev/sgx_enclave:/dev/sgx_enclave" "-v" "/var/run/aesmd:/var/run/aesmd")
+elif [ -e /dev/sgx/enclave ] && [ ! -e /dev/sgx_enclave ]; then
+    echo "Out of kernel SGX device found in /dev/sgx/enclave but not supported by Conclave"
+    exit 1
+else
+    echo "SGX device not found in /dev/sgx/enclave"
 fi
 
 docker_group_add=()
@@ -120,6 +105,7 @@ docker_opts=(\
 function runDocker() {
     container_image=$1
     docker run \
+        ${3:-} \
         ${docker_opts[@]+"${docker_opts[@]}"} \
         ${container_image} \
         bash -c "$2"

@@ -1,11 +1,11 @@
 package com.r3.conclave.integrationtests.general.commonenclave
 
 import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.common.internal.Cursor
 import com.r3.conclave.common.internal.SgxKeyRequest
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.enclave.internal.EnclaveEnvironment
 import com.r3.conclave.enclave.internal.PlaintextAndEnvelope
+import com.r3.conclave.integrationtests.general.common.ByteCursor
 import com.r3.conclave.integrationtests.general.common.EnclaveContext
 import com.r3.conclave.integrationtests.general.common.PlaintextAndAD
 import com.r3.conclave.integrationtests.general.common.tasks.EnclaveTestAction
@@ -47,7 +47,7 @@ abstract class AbstractTestActionEnclave : Enclave() {
         override val persistentMap: MutableMap<String, ByteArray> get() {
             return getPersistentMap()
         }
-        override fun getSecretKey(keyRequest: Cursor<SgxKeyRequest, ByteBuffer>): ByteArray {
+        override fun getSecretKey(keyRequest: ByteCursor<SgxKeyRequest>): ByteArray {
             return env.getSecretKey(keyRequest)
         }
         override fun sealData(data: PlaintextAndAD): ByteArray {

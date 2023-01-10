@@ -22,6 +22,14 @@ function getGitCommitId() {
   git rev-parse HEAD
 }
 
+function getJepVersion() {
+  getVersionValueFromVersionsFile jep_version
+}
+
+function getGramineVersion() {
+  getVersionValueFromVersionsFile gramine_version
+}
+
 # Returns 0 if the docker image exists. Otherwise, 1.
 # Returning zero as true is strange but that is the convention with bash shell.
 # N.B. The image might exist locally and not on the remote server

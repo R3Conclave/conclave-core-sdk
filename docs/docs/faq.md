@@ -79,7 +79,7 @@ The communication channels to/from the enclave are:
 2. The client can use Conclave Mail to communicate with the enclave using the encryption key included in the
 remote attestation.
 
-Conclave provides a [web host](conclave-web-host.md) out of the box which uses an HTTP RESTful API for communication 
+Conclave provides a [web host](conclave-web-host.md) out of the box which uses an HTTP RESTful API for communication
 between the enclave and the client.
 
 However, Conclave doesn't define any particular network protocol for the host to route messages to and from the network.
@@ -94,8 +94,8 @@ You can also embed the byte arrays inside any other protocol.
 
 Ensure that the service provider and the provider of the client (the UI) are different.
 
-The purpose of the enclave is to protect secrets. If the host also provides the user interface or client 
-app, you don't even know that the client is even talking to the enclave. It might access the data 
+The purpose of the enclave is to protect secrets. If the host also provides the user interface or client
+app, you don't even know that the client is even talking to the enclave. It might access the data
 when it's unencrypted (e.g., on your screen or disk), send it elsewhere, encrypt it with a back door,
 or break the system's protection in many other ways.
 
@@ -135,8 +135,8 @@ please [talk to us on discord](https://discord.gg/zpHKkMZ8Sw).
 
 ### Will using Conclave require any agreements with Intel?
 
-No. Modern Intel chips support flexible launch control that allows the owner of the hardware to decide which 
-enclaves can be loaded. For example, when you deploy to Microsoft Azure, no agreement or interaction with Intel is 
+No. Modern Intel chips support flexible launch control that allows the owner of the hardware to decide which
+enclaves can be loaded. For example, when you deploy to Microsoft Azure, no agreement or interaction with Intel is
 needed, as Azure allows any self-signed enclave.
 
 !!! Note
@@ -217,12 +217,12 @@ host server refresh more frequently than the client requires.
 
 ### Isn't putting a whole JVM into an enclave a bit fat?
 
-The native images produced by Conclave don't include a traditional full JVM like HotSpot. Conclave compiles all code 
+The native images produced by Conclave don't include a traditional full JVM like HotSpot. Conclave compiles all code
 ahead of time and dynamic class loading isn't possible (a model similar to languages like Rust and C++). The runtime
 components of the enclave are the garbage collector (which is necessary to avoid memory-safety bugs), and some small
 pieces of code for miscellaneous tasks like the generation of stack traces.
 
-It's a good idea to keep the enclave small to reduce the chance of critical security bugs. But this logic mostly 
+It's a good idea to keep the enclave small to reduce the chance of critical security bugs. But this logic mostly
 applies when writing code in unsafe languages like C, C++, or when using unsafe blocks in Rust.
 The runtime in Conclave enclaves exists mostly to prevent security bugs in the rest of the code. Additionally, the
 runtime is itself written in Java. So, the same components that protect your code also protect the runtime.
@@ -241,15 +241,15 @@ Conclave requires at least Java 8 to build and run an enclave application. Java 
 
 ### At which points in time is a connection with Intel needed?
 
-As Intel's latest processors use DCAP attestation, you don't need to connect with Intel anymore. For example, no direct 
-connection to Intel is required on Microsoft Azure. Azure runs caching proxies in-cloud, and Conclave uses them 
+As Intel's latest processors use DCAP attestation, you don't need to connect with Intel anymore. For example, no direct
+connection to Intel is required on Microsoft Azure. Azure runs caching proxies in-cloud, and Conclave uses them
 automatically.
 
 ### Can I deploy Conclave applications on-premise?
 
-Conclave recommends to deploy enclaves on modern Azure virtual machines like DC4s_V3 that support the latest 
+Conclave recommends to deploy enclaves on modern Azure virtual machines like DC4s_V3 that support the latest
 attestation protocols. However, on-premise deployment is possible. Please [reach out to us on discord](https://discord.gg/zpHKkMZ8Sw)
-for more information about on-premise deployment. 
+for more information about on-premise deployment.
 
 ### Can I print debug output to the console from my enclave?
 
@@ -312,19 +312,19 @@ your application runs fine when a cloud service provider transfers your enclave 
 ### Do you support AMD SEV?
 
 We don't support AMD SEV now. We may consider it for a future release. If you would like Conclave to support AMD SEV,
-please [let us know on discord](https://discord.gg/zpHKkMZ8Sw). 
+please [let us know on discord](https://discord.gg/zpHKkMZ8Sw).
 
 Intel is also working on an SEV-equivalent feature for protecting entire (Linux) virtual machines from
 the host hardware. We will consider to add support for this also in the future.
 
 ### Do you plan to support ARM TrustZone?
 
-Not at this time. ARM TrustZone doesn't support remote attestation. We will re-evaluate when TrustZone supports remote 
+Not at this time. ARM TrustZone doesn't support remote attestation. We will re-evaluate when TrustZone supports remote
 attestation.
 
 ### Do you plan to support AWS/Nitro?
 
-Currently, we don't have plans to support Nitro as it's not an enclave. Nitro is Amazon's in-house security technology 
+Currently, we don't have plans to support Nitro as it's not an enclave. Nitro is Amazon's in-house security technology
 that restricts AWS employees from accessing custom servers.
 
 ### Do you have plans to support cloud providers as the root of trust?

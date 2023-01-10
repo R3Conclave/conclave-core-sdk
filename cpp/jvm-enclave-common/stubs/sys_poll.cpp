@@ -3,9 +3,12 @@
 //
 #include "vm_enclave_layer.h"
 
-//////////////////////////////////////////////////////////////////////////////
-// Stub functions to satisfy the linker
-STUB(poll);
-
 extern "C" {
+
+    typedef unsigned long int nfds_t;
+
+    int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
+        errno = ENOSYS;
+        return -1;
+    }
 }

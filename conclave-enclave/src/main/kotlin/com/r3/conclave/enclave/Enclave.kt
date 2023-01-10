@@ -9,8 +9,6 @@ import com.r3.conclave.common.internal.SgxReportBody.isvProdId
 import com.r3.conclave.common.internal.SgxReportBody.mrenclave
 import com.r3.conclave.common.internal.SgxReportBody.mrsigner
 import com.r3.conclave.common.internal.SgxSignedQuote.quote
-import com.r3.conclave.common.internal.attestation.Attestation
-import com.r3.conclave.common.internal.handler.*
 import com.r3.conclave.common.internal.kds.EnclaveKdsConfig
 import com.r3.conclave.common.kds.KDSKeySpec
 import com.r3.conclave.enclave.Enclave.CallState.Receive
@@ -25,7 +23,11 @@ import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
+import java.io.IOException
+import java.io.OutputStream
+import java.io.PrintStream
 import java.io.UTFDataFormatException
+import java.lang.IllegalStateException
 import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -41,13 +43,13 @@ import kotlin.concurrent.withLock
  * Subclass this inside your enclave to provide an entry point. The outside world
  * communicates with the enclave via two mechanisms:
  *
- * 1. Local connections from the host. But remember the host is malicious in the SGX
- *    threat model, so anything received from the host cannot be completely trusted.
- *    Override and implement [receiveFromUntrustedHost] to receive the byte arrays sent via
- *    [com.r3.conclave.host.EnclaveHost.callEnclave].
- * 2. [EnclaveMail], an encrypted, authenticated and padded asynchronous messaging
- *    scheme. Clients that obtain a [EnclaveInstanceInfo] from the host can create
- *    mails and send it to the host for delivery. Override and implement [receiveMail] to receive mail via the host.
+ * 1. Local connections from the host. But remember the host is malicious in the SGX threat model, so anything
+ * received from the host cannot be completely trusted. Override and implement [receiveFromUntrustedHost] to receive
+ * the byte arrays sent via [com.r3.conclave.host.EnclaveHost.callEnclave].
+ *
+ * 2. [EnclaveMail], an encrypted, authenticated, and padded asynchronous messaging scheme. Clients that obtain an
+ * [EnclaveInstanceInfo] from the host can create mails and send it to the host for delivery. Override and implement
+ * [receiveMail] to receive mail via the host.
  *
  * Enclaves can sign things with a key that appears in the [EnclaveInstanceInfo].
  * This can be useful when the enclave is being used to create a proof of correct
@@ -79,12 +81,11 @@ abstract class Enclave {
     // The signing key pair are assigned with the same value retrieved from getDefaultKey.
     // Such key should always be the same if the enclave is running within the same CPU and having the same MRSIGNER.
     private lateinit var signingKeyPair: KeyPair
-    private lateinit var adminHandler: AdminHandler
-    private lateinit var quotingEnclaveInfoHandler: QuotingEnclaveInfoHandler
-    private lateinit var signedQuoteHandler: SignedQuoteHandler
-    private lateinit var enclaveInstanceInfoQuoteHandler: EnclaveInstanceInfoQuoteHandler
-    private lateinit var enclaveMessageHandler: EnclaveMessageHandler
     private lateinit var aesPersistenceKey: ByteArray
+
+    private val setKdsPersistenceKeyCallHandler = SetKdsPersistenceKeyCallHandler()
+    private val getEnclaveInstanceInfoQuoteCallHandler = GetEnclaveInstanceInfoQuoteCallHandler()
+    private val enclaveMessageHandler = EnclaveMessageHandler()
 
     private val lastSeenStateIds = HashMap<PublicKey, EnclaveStateId>()
     private val postOffices = HashMap<PublicKeyAndTopic, SessionEnclavePostOffice>()
@@ -150,7 +151,37 @@ abstract class Enclave {
     protected val signatureKey: PublicKey get() = signingKeyPair.public
 
     /** The serializable remote attestation object for this enclave instance. */
-    protected val enclaveInstanceInfo: EnclaveInstanceInfo get() = adminHandler.enclaveInstanceInfo
+    protected val enclaveInstanceInfo: EnclaveInstanceInfo by lazy {
+        generateEnclaveInstanceInfo()
+    }
+
+    /**
+     * Create an enclave instance info object.
+     */
+    private fun generateEnclaveInstanceInfo(): EnclaveInstanceInfoImpl {
+        val attestation = env.getAttestation()
+        val attestationReportBody = attestation.reportBody
+        val enclaveReportBody = getEnclaveInstanceInfoQuoteCallHandler.mostRecentQuote[quote][reportBody]
+
+        check(attestationReportBody == enclaveReportBody) {
+            """Host has provided attestation for a different enclave.
+               Expected: $enclaveReportBody
+               Received: $attestationReportBody""".trimIndent()
+        }
+
+        // It's also important to check the enclave modes match. Specifically we want to prevent an attestation marked
+        // as secure from being used when the enclave is running in non-hardware mode (all non-hardware attestations
+        // are insecure).
+        check(attestation.enclaveMode == env.enclaveMode) {
+            "The enclave mode of the attestation (${attestation.enclaveMode}) does not match ${env.enclaveMode}"
+        }
+
+        return EnclaveInstanceInfoImpl(
+                signatureKey,
+                encryptionKeyPair.public as Curve25519PublicKey,
+                attestation
+        )
+    }
 
     /**
      * The remote attestation object for the KDS enclave this enclave is using for persistence. This will be null if
@@ -212,29 +243,39 @@ abstract class Enclave {
 
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
-    private fun initialise(env: EnclaveEnvironment, upstream: Sender): HandlerConnected<*> {
+    private fun initialise(env: EnclaveEnvironment) {
         this.env = env
-        // If the Enclave class implements InternalEnclave then the behaviour of the enclave is entirely delegated
-        // to the InternalEnclave implementation and the Conclave-specific APIs (e.g. callUntrustedHost, etc) are
-        // disabled. This allows us to test the enclave environment in scenarios where we don't want the Conclave handlers.
-        return if (this is InternalEnclave) {
-            this.internalInitialise(env, upstream)
-        } else {
-            initCryptography()
-            /*
-            Here we should not add any code that throws exceptions. This is because the handler mechanisms haven't
-            yet been put in place and an exception would cause the Enclave to terminate in such a way that we can't
-            control and without meaningful stacktrace as this can't be reported back.
-            */
-            val exceptionSendingHandler = ExceptionSendingHandler(env.enclaveMode == EnclaveMode.RELEASE)
-            val connected = HandlerConnected.connect(exceptionSendingHandler, upstream)
-            val mux = connected.connection.setDownstream(SimpleMuxingHandler())
-            adminHandler = mux.addDownstream(AdminHandler(this, env))
-            quotingEnclaveInfoHandler = mux.addDownstream(QuotingEnclaveInfoHandler())
-            signedQuoteHandler = mux.addDownstream(SignedQuoteHandler())
-            enclaveInstanceInfoQuoteHandler = mux.addDownstream(EnclaveInstanceInfoQuoteHandler())
-            enclaveMessageHandler = mux.addDownstream(EnclaveMessageHandler())
-            connected
+
+        // Prevent users from printing to the console when running the enclave in release mode
+        // GraalVM already discards the output so the following if statement is only relevant for GramineSGX
+        // N.B. The developer of the enclave can still override the configuration below and print to the console
+        // when running the enclave in release mode. But that has to be a conscious decision.
+        if (env.enclaveMode == EnclaveMode.RELEASE && env is GramineSGXEnclaveEnvironment) {
+            // The object should be nullOutputStream instead but Conclave must support Java 8
+            val nullOut = PrintStream(NullOutputStream)
+            System.setOut(nullOut);
+            System.setErr(nullOut);
+        }
+
+        initCryptography()
+
+        env.hostInterface.apply {
+            registerCallHandler(EnclaveCallType.START_ENCLAVE, StartCallHandler())
+            registerCallHandler(EnclaveCallType.STOP_ENCLAVE, StopCallHandler())
+            registerCallHandler(EnclaveCallType.GET_KDS_PERSISTENCE_KEY_SPEC, GetKdsPersistenceKeySpecCallHandler())
+            registerCallHandler(EnclaveCallType.SET_KDS_PERSISTENCE_KEY, setKdsPersistenceKeyCallHandler)
+            registerCallHandler(EnclaveCallType.GET_ENCLAVE_INSTANCE_INFO_QUOTE, getEnclaveInstanceInfoQuoteCallHandler)
+            registerCallHandler(EnclaveCallType.CALL_MESSAGE_HANDLER, enclaveMessageHandler)
+        }
+
+        env.setEnclaveInfo(signatureKey, encryptionKeyPair)
+    }
+
+    private object NullOutputStream : OutputStream() {
+        override fun write(b: Int) {
+        }
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
         }
     }
 
@@ -260,19 +301,7 @@ abstract class Enclave {
             }
             ByteCursor.wrap(SgxReportData, reportData)
         }
-        val quotingEnclaveInfo = quotingEnclaveInfoHandler.getQuotingEnclaveInfo()
-        return createAttestationQuote(quotingEnclaveInfo, reportDataCursor).bytes
-    }
-
-    /**
-     * Internal implementation of createAttestationQuote, using byte cursors rather than raw byte arrays.
-     */
-    private fun createAttestationQuote(
-            quotingEnclaveInfo: ByteCursor<SgxTargetInfo>,
-            reportData: ByteCursor<SgxReportData>?
-    ): ByteCursor<SgxSignedQuote> {
-        val report = env.createReport(quotingEnclaveInfo, reportData)
-        return signedQuoteHandler.getSignedQuote(report)
+        return env.getSignedQuote(getEnclaveInstanceInfoQuoteCallHandler.quotingEnclaveInfo, reportDataCursor).bytes
     }
 
     /**
@@ -281,11 +310,11 @@ abstract class Enclave {
     @Suppress("unused")  // Accessed via reflection
     @PotentialPackagePrivate
     private fun initialiseMock(
-        upstream: Sender,
         mockConfiguration: MockConfiguration?,
-        kdsConfig: EnclaveKdsConfig?
-    ): HandlerConnected<*> {
-        return initialise(MockEnclaveEnvironment(this, mockConfiguration, kdsConfig), upstream)
+        kdsConfig: EnclaveKdsConfig?,
+        callInterfaceConnector: MockCallInterfaceConnector
+    ) {
+        initialise(MockEnclaveEnvironment(this, mockConfiguration, kdsConfig, callInterfaceConnector))
     }
 
     /**
@@ -424,69 +453,125 @@ abstract class Enclave {
     }
 
     /**
-     * Handles the initial comms with the host - we send the host our info, it sends back an attestation response object
-     * which we can use to build our [EnclaveInstanceInfo] to include in messages to other enclaves.
+     * Create a policy constraint string from a persistence key spec.
+     * This method handles the logic for "useOwnCodeHash" and "useOwnSignerAndProductID".
      */
-    private class AdminHandler(
-        private val enclave: Enclave,
-        private val env: EnclaveEnvironment
-    ) : Handler<AdminHandler> {
-        private lateinit var sender: Sender
-        private var _enclaveInstanceInfo: EnclaveInstanceInfoImpl? = null
-        private lateinit var persistenceKdsKeySpec: KDSKeySpec
+    private fun buildPersistencePolicyConstraint(persistenceKeySpec: EnclaveKdsConfig.PersistenceKeySpec): String {
+        val builder = StringBuilder(persistenceKeySpec.policyConstraint.constraint)
 
-        private val messageTypes = HostToEnclave.values()
+        val parsedUserConstraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
 
-        override fun connect(upstream: Sender): AdminHandler {
-            sender = upstream
-            // At the time we send upstream the mux handler hasn't been configured for receiving, but that's OK.
-            // The onReceive method will run later, when the AttestationResponse has been obtained from the attestation
-            // servers.
-            sendEnclaveInfo()
-            return this
-        }
-
-        override fun onReceive(connection: AdminHandler, input: ByteBuffer) {
-            when (messageTypes[input.get().toInt()]) {
-                HostToEnclave.ATTESTATION -> onAttestation(input)
-                HostToEnclave.OPEN -> onOpen(input)
-                HostToEnclave.CLOSE -> onClose()
-                HostToEnclave.PERSISTENCE_KDS_KEY_SPEC_REQUEST -> onPersistenceKdsKeySpecRequest()
-                HostToEnclave.PERSISTENCE_KDS_PRIVATE_KEY_RESPONSE -> onPersistenceKdsPrivateKeyResponse(input)
+        val report = env.createReport(null, null)
+        if (persistenceKeySpec.policyConstraint.useOwnCodeHash) {
+            val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
+            if (mrenclave !in parsedUserConstraint.acceptableCodeHashes) {
+                builder.append(" C:").append(mrenclave)
             }
         }
 
-        private fun onAttestation(input: ByteBuffer) {
-            // Ensure this method is only called once
-            check(_enclaveInstanceInfo == null)
+        if (persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID) {
+            val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
+            val productId = report[body][isvProdId].read()
+            if (mrsigner !in parsedUserConstraint.acceptableSigners) {
+                builder.append(" S:").append(mrsigner)
+            }
+            if (parsedUserConstraint.productID == null) {
+                builder.append(" PROD:").append(productId)
+            } else {
+                require(parsedUserConstraint.productID == productId) {
+                    "Cannot apply useOwnCodeSignerAndProductID to the KDS persistence policy constraint as " +
+                            "PROD:${parsedUserConstraint.productID} is already specified"
+                }
+            }
+        }
 
-            val attestation = Attestation.getFromBuffer(input)
-            val attestationReportBody = attestation.reportBody
-            val enclaveReportBody = enclave.enclaveInstanceInfoQuoteHandler.mostRecentQuote[quote][reportBody]
-            check(attestationReportBody == enclaveReportBody) {
-                """Host has provided attestation for a different enclave.
-Expected: $enclaveReportBody
-Received: $attestationReportBody"""
-            }
-            // It's also important to check the enclave modes match. Specifically we want to prevent an attestation marked
-            // as secure from being used when the enclave is running in non-hardware mode (all non-hardware attestations
-            // are insecure).
-            check(attestation.enclaveMode == env.enclaveMode) {
-                "The enclave mode of the attestation (${attestation.enclaveMode}) does not match ${env.enclaveMode}"
-            }
-            _enclaveInstanceInfo = EnclaveInstanceInfoImpl(
-                enclave.signatureKey,
-                enclave.encryptionKeyPair.public as Curve25519PublicKey,
-                attestation
+        return builder.toString()
+    }
+
+    /**
+     * Handler which services requests from the host for Conclave EnclaveInstanceInfo attestation quotes.
+     */
+    private inner class GetEnclaveInstanceInfoQuoteCallHandler : CallHandler {
+        var quotingEnclaveInfo: ByteCursor<SgxTargetInfo>? = null
+        private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
+        val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
+
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            quotingEnclaveInfo = ByteCursor.wrap(SgxTargetInfo, parameterBuffer.getAllBytes(true))
+            val quote = env.getSignedQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
+            _mostRecentQuote = quote
+            return ByteBuffer.wrap(quote.bytes)
+        }
+    }
+
+    // TODO: Remove or refactor this once the AdminHandler is removed
+    lateinit var persistenceKdsKeySpec: KDSKeySpec
+
+    /**
+     * Handler which services requests from the host for the enclave persistence key specification.
+     */
+    private inner class GetKdsPersistenceKeySpecCallHandler : CallHandler {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            val persistenceKeySpec = env.kdsConfiguration?.persistenceKeySpec ?: return null
+
+            persistenceKdsKeySpec = KDSKeySpec(
+                    KDS_PERSISTENCE_KEY_NAME,
+                    persistenceKeySpec.masterKeyType,
+                    buildPersistencePolicyConstraint(persistenceKeySpec)
             )
+
+            val nameBytes = persistenceKdsKeySpec.name.toByteArray()
+            val policyConstraintBytes = persistenceKdsKeySpec.policyConstraint.toByteArray()
+            val payloadSize = nameBytes.intLengthPrefixSize + 1 + policyConstraintBytes.size
+
+            val buffer = ByteBuffer.wrap(ByteArray(payloadSize)).apply {
+                putIntLengthPrefixBytes(nameBytes)
+                put(persistenceKdsKeySpec.masterKeyType.id.toByte())
+                put(policyConstraintBytes)
+            }
+
+            return buffer
+        }
+    }
+
+    /**
+     * Handler which handles requests from the host to set the KDS persistence key.
+     */
+    private inner class SetKdsPersistenceKeyCallHandler : CallHandler {
+        fun getKdsPrivateKeyResponse(input: ByteBuffer): KdsPrivateKeyResponse {
+            val mailDecryptingStream = getMailDecryptingStream(input.getIntLengthPrefixSlice())
+            val kdsResponseMail = mailDecryptingStream.decryptMail(encryptionKeyPair.private)
+            val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getIntLengthPrefixSlice())
+            return KdsPrivateKeyResponse(kdsResponseMail, kdsEnclaveInstanceInfo)
         }
 
-        private fun onOpen(input: ByteBuffer) {
-            if (env.enablePersistentMap && enclave.threadSafe) {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            check(kdsEiiForPersistence == null) {
+                "Enclave has already received a KDS persistence private key."
+            }
+            val kdsConfig = checkNotNull(env.kdsConfiguration) {
+                "Host is attempting to send in a KDS persistence private key even though the enclave is not " +
+                        "configured to use a KDS"
+            }
+            val privateKeyResponse = getKdsPrivateKeyResponse(parameterBuffer)
+            kdsEiiForPersistence = privateKeyResponse.kdsEnclaveInstanceInfo
+            val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = persistenceKdsKeySpec)
+            // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
+            aesPersistenceKey = kdsPersistenceKey.copyOf(16)
+            return null
+        }
+    }
+
+    /**
+     * Handler which handles start requests from the host.
+     */
+    private inner class StartCallHandler : CallHandler {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            if (env.enablePersistentMap && threadSafe) {
                 throw EnclaveStartException("The persistent map is not available in multi-threaded enclaves.")
             }
 
-            enclave.lock.withLock {
+            lock.withLock {
                 /*
                 Functions that are not strictly related to the enclave initialization but that needs to be executed
                   before the enclave starts up need to be placed here as here we can handle
@@ -494,154 +579,44 @@ Received: $attestationReportBody"""
                 Specifically, setupFileSystems can throw an exception in case the Host does not provide a
                 filesystem file path for it and by having the call here allows us to handle this gracefully.
                  */
-                enclave.enclaveStateManager.transitionStateFrom<New>(to = Started)
-                val sealedStateBlob = input.getNullable { this }
+                enclaveStateManager.transitionStateFrom<New>(to = Started)
+                val sealedStateBlob = parameterBuffer.getNullable { this }
 
-                enclave.initialiseLocalPersistenceKeyIfNecessary()
+                initialiseLocalPersistenceKeyIfNecessary()
 
                 try {
                     if (sealedStateBlob != null) {
-                        enclave.applySealedState(sealedStateBlob)
+                        applySealedState(sealedStateBlob)
                     }
-                    enclave.setupFileSystems()
-                    enclave.onStartup()
+                    setupFileSystems()
+                    onStartup()
                 } catch (e: EnclaveStartException) {
                     throw e
                 } catch (t: Throwable) {
                     throw EnclaveStartException("Unable to start enclave", t)
                 }
             }
+            return null
         }
+    }
 
-        private fun onClose() {
-            enclave.lock.withLock {
-                enclave.enclaveStateManager.transitionStateFrom<Started>(to = Closed)
+    /**
+     * Handler which handles stop calls from the host.
+     */
+    private inner class StopCallHandler : CallHandler {
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            lock.withLock {
+                enclaveStateManager.transitionStateFrom<Started>(to = Closed)
                 // Wait until all receive calls being processed have completed
-                while (enclave.numberReceiveCallsExecuting > 0) {
-                    enclave.enclaveQuiescentCondition.await()
+                while (numberReceiveCallsExecuting > 0) {
+                    enclaveQuiescentCondition.await()
                 }
                 // This method call must be at the top so the enclave derived class can release its resources
                 // Any code that releases resources used by the enclave must be placed after the function
                 // onShutdown
-                enclave.onShutdown()
+                onShutdown()
             }
-        }
-
-        private fun sendEnclaveInfo() {
-            val encodedSigningKey = enclave.signatureKey.encoded   // 44 bytes
-            val encodedEncryptionKey = enclave.encryptionKeyPair.public.encoded   // 32 bytes
-            val payloadSize = encodedSigningKey.size + encodedEncryptionKey.size
-            sendToHost(EnclaveToHost.ENCLAVE_INFO, payloadSize) { buffer ->
-                buffer.put(encodedSigningKey)
-                buffer.put(encodedEncryptionKey)
-            }
-        }
-
-        private fun onPersistenceKdsKeySpecRequest() {
-            // The enclave is free to not use a KDS so it can ignore the key spec request if a kds config hasn't been
-            // defined. The host will see that we've not sent back a key spec.
-            val persistenceKeySpec = enclave.env.kdsConfiguration?.persistenceKeySpec ?: return
-            persistenceKdsKeySpec = KDSKeySpec(
-                KDS_PERSISTENCE_KEY_NAME,
-                persistenceKeySpec.masterKeyType,
-                buildPersistencePolicyConstraint(persistenceKeySpec)
-            )
-            sendKdsPersistenceKeySpecToHost(persistenceKdsKeySpec)
-        }
-
-        private fun buildPersistencePolicyConstraint(persistenceKeySpec: EnclaveKdsConfig.PersistenceKeySpec): String {
-            val builder = StringBuilder(persistenceKeySpec.policyConstraint.constraint)
-
-            val parsedUserConstraint = EnclaveConstraint.parse(persistenceKeySpec.policyConstraint.constraint, false)
-
-            val report = env.createReport(null, null)
-            if (persistenceKeySpec.policyConstraint.useOwnCodeHash) {
-                val mrenclave = SHA256Hash.get(report[body][mrenclave].read())
-                if (mrenclave !in parsedUserConstraint.acceptableCodeHashes) {
-                    builder.append(" C:").append(mrenclave)
-                }
-            }
-
-            if (persistenceKeySpec.policyConstraint.useOwnCodeSignerAndProductID) {
-                val mrsigner = SHA256Hash.get(report[body][mrsigner].read())
-                val productId = report[body][isvProdId].read()
-                if (mrsigner !in parsedUserConstraint.acceptableSigners) {
-                    builder.append(" S:").append(mrsigner)
-                }
-                if (parsedUserConstraint.productID == null) {
-                    builder.append(" PROD:").append(productId)
-                } else {
-                    require(parsedUserConstraint.productID == productId) {
-                        "Cannot apply useOwnCodeSignerAndProductID to the KDS persistence policy constraint as " +
-                                "PROD:${parsedUserConstraint.productID} is already specified"
-                    }
-                }
-            }
-
-            return builder.toString()
-        }
-
-        private fun onPersistenceKdsPrivateKeyResponse(input: ByteBuffer) {
-            check(enclave.kdsEiiForPersistence == null) {
-                "Enclave has already received a KDS persistence private key."
-            }
-            val kdsConfig = checkNotNull(env.kdsConfiguration) {
-                "Host is attempting to send in a KDS persistence private key even though the enclave is not " +
-                        "configured to use a KDS"
-            }
-            val privateKeyResponse = getKdsPrivateKeyResponse(input)
-            enclave.kdsEiiForPersistence = privateKeyResponse.kdsEnclaveInstanceInfo
-            val kdsPersistenceKey = privateKeyResponse.getPrivateKey(kdsConfig, expectedKeySpec = persistenceKdsKeySpec)
-            // The KDS key may be longer than 128 bit, so we only use the first 128 bits.
-            enclave.aesPersistenceKey = kdsPersistenceKey.copyOf(16)
-        }
-
-        fun getKdsPrivateKeyResponse(input: ByteBuffer): KdsPrivateKeyResponse {
-            val mailDecryptingStream = getMailDecryptingStream(input.getIntLengthPrefixSlice())
-            val kdsResponseMail = mailDecryptingStream.decryptMail(enclave.encryptionKeyPair.private)
-            val kdsEnclaveInstanceInfo = EnclaveInstanceInfo.deserialize(input.getIntLengthPrefixSlice())
-            return KdsPrivateKeyResponse(kdsResponseMail, kdsEnclaveInstanceInfo)
-        }
-
-        /**
-         * Return the [EnclaveInstanceInfoImpl] for this enclave. The first time this is called it asks the host for the
-         * [Attestation] object it received from the attestation service. From that the enclave is able to construct the
-         * info object. By making this lazy we avoid slowing down the enclave startup process if it's never used.
-         */
-        @get:Synchronized
-        val enclaveInstanceInfo: EnclaveInstanceInfoImpl
-            get() {
-                if (_enclaveInstanceInfo == null) {
-                    sendAttestationRequest()
-                }
-                return _enclaveInstanceInfo!!
-            }
-
-        /**
-         * Send a request to the host for the [Attestation] object. The enclave has the other properties needed
-         * to construct its [EnclaveInstanceInfoImpl]. This way less bytes are transferred and there's less checking that
-         * needs to be done.
-         */
-        private fun sendAttestationRequest() {
-            sendToHost(EnclaveToHost.ATTESTATION, 0) { }
-        }
-
-        fun sendKdsPersistenceKeySpecToHost(keySpec: KDSKeySpec) {
-            val nameBytes = keySpec.name.toByteArray()
-            val policyConstraintBytes = keySpec.policyConstraint.toByteArray()
-            val payloadSize = nameBytes.intLengthPrefixSize + 1 + policyConstraintBytes.size
-            sendToHost(EnclaveToHost.PERSISTENCE_KDS_KEY_SPEC_RESPONSE, payloadSize) { buffer ->
-                buffer.putIntLengthPrefixBytes(nameBytes)
-                buffer.put(keySpec.masterKeyType.id.toByte())
-                buffer.put(policyConstraintBytes)
-            }
-        }
-
-        private fun sendToHost(type: EnclaveToHost, payloadSize: Int, payload: (ByteBuffer) -> Unit) {
-            sender.send(1 + payloadSize) { buffer ->
-                buffer.put(type.ordinal.toByte())
-                payload(buffer)
-            }
+            return null
         }
     }
 
@@ -666,9 +641,8 @@ Received: $attestationReportBody"""
 
     }
 
-    private inner class EnclaveMessageHandler : Handler<EnclaveMessageHandler> {
+    private inner class EnclaveMessageHandler : CallHandler {
         private val kdsPrivateKeyCache = ConcurrentHashMap<KDSKeySpec, PrivateKey>()
-        private lateinit var sender: Sender
 
         private val currentEnclaveCall = ThreadLocal<Long>()
         private val enclaveCalls = ConcurrentHashMap<Long, StateManager<CallState>>()
@@ -684,11 +658,6 @@ Received: $attestationReportBody"""
          */
         var currentReceiveContext: ReceiveContext? = null
 
-        override fun connect(upstream: Sender): EnclaveMessageHandler {
-            sender = upstream
-            return this
-        }
-
         // .values() returns a fresh array each time so cache it here.
         private val callTypeValues = InternalCallType.values()
 
@@ -696,9 +665,9 @@ Received: $attestationReportBody"""
         private val receiveFromUntrustedHostCallback = HostCallback(::receiveFromUntrustedHost)
 
         // This method can be called concurrently by the host.
-        override fun onReceive(connection: EnclaveMessageHandler, input: ByteBuffer) {
-            val type = callTypeValues[input.get().toInt()]
-            val hostThreadId = input.long
+        override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+            val type = callTypeValues[parameterBuffer.get().toInt()]
+            val hostThreadId = parameterBuffer.long
             // Assign the host thread ID to the current thread so that callUntrustedHost/postMail/etc can pick up the
             // right state for the thread.
             currentEnclaveCall.set(hostThreadId)
@@ -707,11 +676,12 @@ Received: $attestationReportBody"""
                 StateManager(Receive(receiveFromUntrustedHostCallback, receiveFromUntrustedHost = true))
             }
             when (type) {
-                MAIL -> onMail(hostThreadId, input)
-                UNTRUSTED_HOST -> onUntrustedHost(stateManager, hostThreadId, input)
-                CALL_RETURN -> onCallReturn(stateManager, input)
+                MAIL -> onMail(hostThreadId, parameterBuffer)
+                UNTRUSTED_HOST -> onUntrustedHost(stateManager, hostThreadId, parameterBuffer)
+                CALL_RETURN -> onCallReturn(stateManager, parameterBuffer)
                 SEALED_STATE -> throw UnsupportedOperationException("SEALED_STATE is not expected from the host")
             }
+            return null
         }
 
         // TODO Mail acks: https://r3-cev.atlassian.net/browse/CON-616
@@ -720,7 +690,7 @@ Received: $attestationReportBody"""
             // This is the KDS private key response the host made on behalf of the enclave. The host is only required
             // to provide this if the enclave hasn't previously cached the private key this Mail needs. The host
             // determines this by examining the mail's unencrypted derivation header.
-            val kdsPrivateKeyResponse = input.getNullable { adminHandler.getKdsPrivateKeyResponse(this) }
+            val kdsPrivateKeyResponse = input.getNullable { setKdsPersistenceKeyCallHandler.getKdsPrivateKeyResponse(this) }
             val mailStream = getMailDecryptingStream(input)
 
             val keyDerivation = MailKeyDerivation.deserialiseFromMailStream(mailStream)
@@ -971,11 +941,12 @@ Received: $attestationReportBody"""
             payloadSize: Int,
             payload: (ByteBuffer) -> Unit
         ) {
-            sender.send(1 + Long.SIZE_BYTES + payloadSize) { buffer ->
-                buffer.put(type.ordinal.toByte())
-                buffer.putLong(hostThreadId)
-                payload(buffer)
+            val buffer = ByteBuffer.allocate(1 + Long.SIZE_BYTES + payloadSize).apply {
+                put(type.ordinal.toByte())
+                putLong(hostThreadId)
+                payload(this)
             }
+            env.sendEnclaveMessageResponse(buffer)
         }
 
         fun postMail(encryptedBytes: ByteArray, routingHint: String?) {
@@ -990,30 +961,6 @@ Received: $attestationReportBody"""
                 buffer.put(encryptedBytes)
             }
             currentReceiveContext?.run { pendingPostMails-- }
-        }
-    }
-
-    /**
-     * Handler which services requests from the host for Conclave EnclaveInstanceInfo attestation quotes.
-     */
-    private inner class EnclaveInstanceInfoQuoteHandler : Handler<EnclaveInstanceInfoQuoteHandler> {
-        private lateinit var sender: Sender
-
-        private var _mostRecentQuote: ByteCursor<SgxSignedQuote>? = null
-        val mostRecentQuote: ByteCursor<SgxSignedQuote> get() = checkNotNull(_mostRecentQuote)
-
-        override fun connect(upstream: Sender): EnclaveInstanceInfoQuoteHandler {
-            sender = upstream
-            return this
-        }
-
-        override fun onReceive(connection: EnclaveInstanceInfoQuoteHandler, input: ByteBuffer) {
-            val quotingEnclaveInfo = ByteCursor.slice(SgxTargetInfo, input)
-            val quote = createAttestationQuote(quotingEnclaveInfo, createEnclaveInstanceInfoReportData())
-            _mostRecentQuote = quote
-            sender.send(quote.size) { buffer ->
-                buffer.put(quote.buffer)
-            }
         }
     }
 
@@ -1068,7 +1015,8 @@ Received: $attestationReportBody"""
 
     /**
      * Invoked when a mail has been delivered by the host (via [com.r3.conclave.host.EnclaveHost.deliverMail]),
-     * successfully decrypted and authenticated (so the [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html) property is reliable).
+     * successfully decrypted and authenticated (so the [EnclaveMail.getAuthenticatedSender](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail/get-authenticated-sender.html)
+     * property is reliable).
      *
      * Default implementation throws [UnsupportedOperationException] so you should not
      * perform a supercall.

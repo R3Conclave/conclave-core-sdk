@@ -8,8 +8,7 @@ public class Native {
 
     public static native void destroyEnclave(long enclaveId);
 
-    // TODO use ByteBuffers directly
-    public static native void jvmEcall(long enclaveId, byte[] data);
+    public static native void jvmECall(long enclaveId, byte callType, byte messageTypeID, byte[] data);
 
     /**
      * sgx_status_t sgx_init_quote(sgx_target_info_t *p_target_info, sgx_epid_group_id_t *p_gid)
@@ -65,16 +64,12 @@ public class Native {
             QeIdentity
         }
     */
-    public static native int initQuoteDCAP(String bundlePath, byte[] initQuoteResponseOut); // 0 --> OK
+
+    //  TODO: Improve this, as when using Gramine we do not need to fill the byte array
+    public static native int initQuoteDCAP(String bundlePath, boolean loadQuotingLibraries, byte[] initQuoteResponseOut); // 0 --> OK
     public static native int calcQuoteSizeDCAP();  // > 0 --> OK
     public static native int getQuoteDCAP(byte[] quoteRequestIn, byte[] quoteOut); // 0 --> OK
     public static native Object[] getQuoteCollateral(byte[] fmspc, int pck);
-
-    // SgxMetadata
-    public static native void getMetadata(
-        String enclavePath,
-        byte[] metadataOut
-    );
 
     public static native String getCpuCapabilitiesSummary();
 }

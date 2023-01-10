@@ -10,6 +10,9 @@ dependencies {
 conclave {
     productID = 1
     revocationLevel = 0
+    runtime = runtimeType
+    maxThreads = 40         // To match assumptions in tests
+    useInternalDockerRegistry = true
 
     kds {
         kdsEnclaveConstraint = "S:B4CDF6F4FA5B484FCA82292CE340FF305AA294F19382178BEA759E30E7DCFE2D PROD:1 SEC:INSECURE"

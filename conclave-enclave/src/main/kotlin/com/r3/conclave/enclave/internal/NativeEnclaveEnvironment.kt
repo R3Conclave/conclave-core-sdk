@@ -5,8 +5,6 @@ import com.r3.conclave.common.internal.*
 import com.r3.conclave.common.internal.SgxAttributes.flags
 import com.r3.conclave.common.internal.SgxReport.body
 import com.r3.conclave.common.internal.SgxReportBody.attributes
-import com.r3.conclave.common.internal.handler.HandlerConnected
-import com.r3.conclave.common.internal.handler.Sender
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.utilities.internal.EnclaveContext
 import com.r3.conclave.utilities.internal.getRemainingBytes
@@ -19,33 +17,45 @@ import java.util.concurrent.atomic.AtomicLong
 
 @PotentialPackagePrivate
 class NativeEnclaveEnvironment(
-    enclaveClass: Class<*>
+    enclaveClass: Class<*>,
+    override val hostInterface: NativeEnclaveHostInterface
 ) : EnclaveEnvironment(loadEnclaveProperties(enclaveClass, false), null) {
     companion object {
         // The use of reflection is not ideal but Kotlin does not have the concept of package-private visibility.
         // Kotlin's internal visibility is still public under the hood and can be accessed without suppressing access checks.
         private val initialiseMethod =
-                Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java, Sender::class.java)
+                Enclave::class.java.getDeclaredMethod("initialise", EnclaveEnvironment::class.java)
                         .apply { isAccessible = true }
 
-        /** The singleton instance of the user supplied enclave. */
-        private var singletonHandler: HandlerConnected<*>? = null
+        /**
+         * The singleton host interface for the user enclave.
+         * This is passed into the [NativeEnclaveEnvironment] instance when it is instantiated.
+         * See [initialiseEnclave] below.
+         */
+        private val singletonHostInterface = NativeEnclaveHostInterface().apply {
+            registerCallHandler(EnclaveCallType.INITIALISE_ENCLAVE, object : CallHandler {
+                var isInitialised = false
+                override fun handleCall(parameterBuffer: ByteBuffer): ByteBuffer? {
+                    synchronized(this) {
+                        check(!isInitialised) { "Enclave has already been initialised." }
+                        initialiseEnclave(parameterBuffer)
+                        isInitialised = true
+                    }
+                    return null
+                }
+            })
+        }
 
         /**
-         * The ECALL entry point.
+         * Entry point for messages arriving from the host.
          *
-         * @param buffer The chunk of data sent from the host.
+         * @param callTypeID The type of the call this is for, encoded as byte.
+         * @param nativeMessageType The purpose of the message (call/exception/return etc)
+         * @param dataBuffer The chunk of data from the host.
          */
         @JvmStatic
-        fun enclaveEntry(buffer: ByteBuffer) {
-            val singletonHandler = synchronized(this) {
-                singletonHandler ?: run {
-                    // The first ECALL is always the enclave class name, which we only use to instantiate the enclave.
-                    singletonHandler = initialiseEnclave(buffer)
-                    null
-                }
-            }
-            singletonHandler?.onReceive(buffer)
+        fun enclaveEntry(callTypeID: Byte, nativeMessageType: CallInterfaceMessageType, dataBuffer: ByteBuffer) {
+            singletonHostInterface.handleECall(callTypeID, nativeMessageType, dataBuffer)
         }
 
         private fun seedRandom() {
@@ -77,20 +87,21 @@ class NativeEnclaveEnvironment(
             }
         }
 
-        private fun initialiseEnclave(buffer: ByteBuffer): HandlerConnected<*> {
+        private fun initialiseEnclave(buffer: ByteBuffer) {
             seedRandom()
 
             val enclaveClassName = buffer.getRemainingString()
             // TODO We need to load the enclave in a custom classloader that locks out internal packages of the public API.
             //      This wouldn't be needed with Java modules, but the enclave environment runs in Java 8.
             val enclaveClass = Class.forName(enclaveClassName)
-            return try {
+            try {
                 val enclave = enclaveClass.asSubclass(Enclave::class.java)
                     .getDeclaredConstructor()
                     .apply { isAccessible = true }
                     .newInstance()
-                val env = NativeEnclaveEnvironment(enclaveClass)
-                initialiseMethod.invoke(enclave, env, NativeOcallSender) as HandlerConnected<*>
+                val env = NativeEnclaveEnvironment(enclaveClass, singletonHostInterface)
+                env.hostInterface.sanitiseExceptions = (env.enclaveMode == EnclaveMode.RELEASE)
+                initialiseMethod.invoke(enclave, env)
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: e
             }
@@ -110,6 +121,17 @@ class NativeEnclaveEnvironment(
             report.buffer.array()
         )
         return report
+    }
+
+    override fun getSignedQuote(
+        targetInfo: ByteCursor<SgxTargetInfo>?,
+        reportData: ByteCursor<SgxReportData>?
+    ): ByteCursor<SgxSignedQuote> {
+        //  In Native mode, the targetInfo  (also called "quoting enclave info")
+        //    is retrieved by the host, which calls SGX native functions.
+        val report = createReport(targetInfo, reportData)
+        val quoteBuffer = hostInterface.executeOutgoingCallWithReturn(HostCallType.GET_SIGNED_QUOTE, report.buffer)
+        return Cursor.slice(SgxSignedQuote, quoteBuffer)
     }
 
     override fun setupFileSystems(

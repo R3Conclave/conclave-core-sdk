@@ -44,8 +44,8 @@ object ConclaveInit {
         gradlePropertiesFile.writeLines(listOf(
             "# Dependency versions",
             "conclaveVersion=$conclaveVersion",
-            "jupiterVersion=5.8.2",
-            "slf4jVersion=1.7.32",
+            "jupiterVersion=5.9.1",
+            "slf4jVersion=2.0.5",
         ))
     }
 

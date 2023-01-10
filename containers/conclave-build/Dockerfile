@@ -8,28 +8,24 @@ RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && loca
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
-ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
+# TODO curl and apt-transport-https are only needed to install gramine, so they should be run as part of a single
+#  command and then removed.
+# Disable interactive dialogue
+# Otherwise, a message that requires user input will appear while installing Java 17
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         build-essential \
         bash \
-        wget \
-        software-properties-common
+        curl \
+        apt-transport-https \
+        openjdk-17-jdk-headless
+ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
-# Intel DCAP libs (this should be removed once we are bundling them in the Conclave runtime along with the
-# last 5 packages installed below)
-RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | tee /etc/apt/sources.list.d/intel-sgx.list
-RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
-RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main"
+# Add Gramine to Ubuntu repositories
+RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
+RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ focal main' | tee /etc/apt/sources.list.d/gramine.list
+RUN apt-get -y update
 
-# Disable interactive dialogue
-# Otherwise, a message that requires user input will appear while installing Java 17
+ARG gramine_version
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        openjdk-17-jre-headless \
-        az-dcap-client \
-        libsgx-epid \
-        libsgx-quote-ex \
-        libsgx-dcap-ql
-
-CMD java -version
+        gramine=$gramine_version

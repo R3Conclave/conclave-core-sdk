@@ -1,0 +1,17 @@
+plugins {
+    id 'com.r3.conclave.enclave'
+}
+
+conclave {
+    productID = 100
+    revocationLevel = 2
+    useInternalDockerRegistry = true
+
+    release {
+        signingType = dummyKey
+    }
+
+    release {
+        signingType = dummyKey
+    }
+}

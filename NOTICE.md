@@ -47,7 +47,7 @@ Apache 2: https://github.com/spring-projects/spring-boot/blob/main/LICENSE.txt
 
 **[Oracle / Graal VM Community Edition ](https://github.com/oracle/graal)**
 
-Product License  - GraalVM Community Edition
+Product License - GraalVM Community Edition
 
 This is a release of GraalVM Community Edition. GraalVM Community Edition
 consists of multiple modules. The software as a whole, as well as the JVMCI
@@ -171,7 +171,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-**[International Components for Unicode](https://github.com/unicode-org/icu)** -
+**[International Components for Unicode](https://github.com/unicode-org/icu)**
 
 Please see icu4c-license.txt for the copyright and permission notice
 associated with this library, which is also available at:
@@ -292,7 +292,7 @@ freely, subject to the following restrictions:
 
 https://zlib.net/zlib_license.html
 
-**[Intel(R) Software Guard Extensions for Linux* OS](https://github.com/intel/linux-sgx)** -
+**[Intel(R) Software Guard Extensions for Linux* OS](https://github.com/intel/linux-sgx)**
 
 BSD License
 Copyright (C) 2011-2021 Intel Corporation. All rights reserved.
@@ -369,7 +369,7 @@ own licenses; we recommend you read them, as their terms may differ from
 the terms above
 https://github.com/jquery/jquery-migrate/blob/main/LICENSE.txt
 
-**[Jansi](https://fusesource.github.io/jansi)** -
+**[Jansi](https://fusesource.github.io/jansi)**
 
 Apache 2: https://github.com/fusesource/jansi/blob/master/license.txt
 
@@ -381,7 +381,7 @@ Mozilla Public License: https://github.com/MihaiValentin/lunr-languages/blob/mas
 
 Apache 2: https://github.com/remkop/picocli/blob/master/LICENSE
 
-**[YUIDoc Ember Theme](https://github.com/offirgolan/yuidoc-ember-theme)** -
+**[YUIDoc Ember Theme](https://github.com/offirgolan/yuidoc-ember-theme)**
 
 The MIT License (MIT)
 Copyright (c) 2014 Kevin Lakotko, Tony Barone, Brian Reavis
@@ -405,3 +405,32 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 
 https://github.com/offirgolan/yuidoc-ember-theme/blob/master/LICENSE
+
+**[Jep](https://github.com/ninia/jep)**
+
+Copyright (c) 2004 - 2022 JEP AUTHORS.
+
+This file is licenced under the the zlib/libpng License.
+
+This software is provided 'as-is', without any express or implied
+warranty. In no event will the authors be held liable for any
+damages arising from the use of this software.
+
+Permission is granted to anyone to use this software for any
+purpose, including commercial applications, and to alter it and
+redistribute it freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you
+   must not claim that you wrote the original software. If you use
+   this software in a product, an acknowledgment in the product
+   documentation would be appreciated but is not required.
+
+2. Altered source versions must be plainly marked as such, and
+   must not be misrepresented as being the original software.
+
+3. This notice may not be removed or altered from any source
+   distribution.
+
+**[TomlJ](https://github.com/tomlj/tomlj)**
+
+Apache 2: https://github.com/tomlj/tomlj/blob/main/LICENSE

@@ -5,11 +5,18 @@ import com.r3.conclave.host.AttestationParameters
 import com.r3.conclave.host.internal.Native
 import java.nio.ByteBuffer
 
-class EnclaveQuoteServiceEPID(val attestationParameters: AttestationParameters.EPID): EnclaveQuoteService() {
+class EnclaveQuoteServiceEPID(private val attestationParameters: AttestationParameters.EPID): EnclaveQuoteService() {
 
-    override fun initializeQuote(): Cursor<SgxTargetInfo, ByteBuffer> {
-        val quoteResponse = Cursor.allocate(SgxInitQuoteResponse)
+    // In the context of signing the quote, quoteResponse has always the same value.
+    //    It identifies the quoting enclave as the enclave that will verify
+    //    the report generated when signing the quote.
+    private val quoteResponse = Cursor.allocate(SgxInitQuoteResponse)
+
+    init {
         Native.initQuote(quoteResponse.buffer.array())
+    }
+
+    override fun getQuotingEnclaveInfo(): Cursor<SgxTargetInfo, ByteBuffer> {
         return quoteResponse[SgxInitQuoteResponse.quotingEnclaveTargetInfo]
     }
 
@@ -23,8 +30,7 @@ class EnclaveQuoteServiceEPID(val attestationParameters: AttestationParameters.E
             null,
             quoteBytes
         )
-        val signedQuote = Cursor.wrap(SgxSignedQuote, quoteBytes)
-        return signedQuote
+        return Cursor.wrap(SgxSignedQuote, quoteBytes)
     }
 
     private fun createSgxGetQuote(report: ByteCursor<SgxReport>): Cursor<SgxGetQuote, ByteBuffer> {

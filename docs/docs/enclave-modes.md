@@ -71,9 +71,6 @@ We test building and running release-mode enclaves on Ubuntu 20.04 LTS Server x8
 === "Linux"
     **Running** debug and release mode enclaves requires an SGX-supported VM. Refer [Azure Deployment](machine-setup.md) for instructions.
 
-    Please be sure that the environment variable _SGX_AESM_ADDR_ is not set.
-    Failing to do so will prevent the enclave from starting up.
-
 ## Set the enclave mode
 You can choose the mode when declaring a dependency on an enclave module in Gradle. For example, you might add
 the following to your host `build.gradle`:

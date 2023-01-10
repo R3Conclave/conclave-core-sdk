@@ -7,14 +7,16 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
-import org.gradle.internal.os.OperatingSystem
-import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.exists
+import kotlin.io.path.readBytes
+import kotlin.io.path.writeBytes
 
 open class GenerateEnclaveSigningMaterial @Inject constructor(
     objects: ObjectFactory,
@@ -24,6 +26,9 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
     private companion object {
         const val SIGNATURE_DATE_OFFSET = 20 //< Offset of date field in signing input structure
     }
+
+    @get:Input
+    val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:InputFile
     val inputEnclave: RegularFileProperty = objects.fileProperty()
@@ -38,17 +43,17 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
     val outputSigningMaterial: RegularFileProperty = objects.fileProperty()
 
     override fun action() {
-        val dockerOutputSigningFile: File?
-        if (!OperatingSystem.current().isLinux) {
-            // The signing material file may not live in a directory accessible by docker on non-linux
-            // systems. Prepare the file so docker can access it if necessary.
-            dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get())
+        val dockerOutputSigningFile: Path?
+        if (linuxExec.buildInDocker(buildInDocker)) {
+            // The signing material file may not live in a directory accessible by docker.
+            // Prepare the file so docker can access it if necessary.
+            dockerOutputSigningFile = linuxExec.prepareFile(outputSigningMaterial.asFile.get().toPath())
 
             linuxExec.exec(
-                listOf<String> (
+                listOf<String>(
                     plugin.signToolPath().absolutePathString(), "gendata",
                     "-enclave", inputEnclave.asFile.get().absolutePath,
-                    "-out", dockerOutputSigningFile.absolutePath,
+                    "-out", dockerOutputSigningFile.absolutePathString(),
                     "-config", inputEnclaveConfig.asFile.get().absolutePath
                 )
             )
@@ -68,8 +73,8 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
         }
     }
 
-    private fun postProcess(dockerOutputSigningFile: File?) {
-        val outputSigningMaterial = outputSigningMaterial.asFile.get()
+    private fun postProcess(dockerOutputSigningFile: Path?) {
+        val outputSigningMaterial = outputSigningMaterial.asFile.get().toPath()
         val signingFile = dockerOutputSigningFile ?: outputSigningMaterial
         if (!signingFile.exists()) {
             throw GradleException("sign_tool output is missing")
@@ -84,6 +89,6 @@ open class GenerateEnclaveSigningMaterial @Inject constructor(
             putInt(encodedSigDate)
         }
         outputSigningMaterial.writeBytes(data)
-        project.logger.lifecycle("Enclave signing materials: ${outputSigningMaterial.absolutePath}")
+        project.logger.lifecycle("Enclave signing materials: ${outputSigningMaterial.absolutePathString()}")
     }
 }

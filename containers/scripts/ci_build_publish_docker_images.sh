@@ -19,8 +19,9 @@ script_dir=$containers_script_dir/../../scripts
 source ${script_dir}/ci_build_common.sh
 source ${containers_script_dir}/common.sh
 
-# Git commit id
 commit_id=$(getGitCommitId)
+jep_version=$(getJepVersion)
+gramine_version=$(getGramineVersion)
 
 # Downloads or copys Graal from a local directory. This is required for building the sdk build.
 downloadOrCopyGraal() {
@@ -60,21 +61,28 @@ buildContainerSDKBuild() {
     downloadOrCopyGraal
   fi
 
-  docker build -t $container_image_sdk_build --build-arg commit_id=$commit_id .
+  docker build -t $container_image_sdk_build --build-arg commit_id=$commit_id --build-arg jep_version="$jep_version" .
   popd
 }
 
 # Builds conclave-build docker image
 buildContainerConclaveBuild() {
   pushd "${code_host_dir}/containers/conclave-build/"
-  docker build -t $container_image_conclave_build --build-arg commit_id=$commit_id .
+  docker build -t $container_image_conclave_build --build-arg commit_id=$commit_id --build-arg gramine_version="$gramine_version" .
   popd
 }
 
-# Builds AESMD docker image
+# Builds integration-tests-build docker image (N.B.: Must be built after the conclave-build.)
+buildContainerIntegrationTestsBuild() {
+  pushd "${code_host_dir}/containers/integration-tests-build"
+  docker build -t $container_image_integration_tests_build --build-arg container_base_image=$container_image_conclave_build --build-arg commit_id=$commit_id --build-arg jep_version="$jep_version" .
+  popd
+}
+
+# Builds AESMD docker image (this is used by Gramine hardware integration tests)
 buildContainerAESMD() {
-  pushd "${code_host_dir}/containers/aesmd/src/docker"
-  docker build -t $container_image_aesmd --build-arg commit_id=$commit_id .
+  pushd "${code_host_dir}/containers/aesmd/"
+  docker build -t "$container_image_aesmd" --build-arg commit_id="$commit_id" .
   popd
 }
 
@@ -109,9 +117,12 @@ buildAndPublishContainerIfItDoesNotExist() {
 ## Build and publish
 ##################################################################################
 if [ -z "${DOCKER_IMAGE_AESMD_BUILD:-}" ] || [ "${DOCKER_IMAGE_AESMD_BUILD}" == "1" ]; then
-  buildAndPublishContainerIfItDoesNotExist $container_image_aesmd buildContainerAESMD
+  buildAndPublishContainerIfItDoesNotExist "$container_image_aesmd" buildContainerAESMD
 fi
 if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD}" == "1" ]; then
   buildAndPublishContainerIfItDoesNotExist $container_image_conclave_build buildContainerConclaveBuild
+fi
+if [ -z "${DOCKER_IMAGE_CONCLAVE_BUILD_INTEGRATION_TESTS:-}" ] || [ "${DOCKER_IMAGE_CONCLAVE_BUILD_INTEGRATION_TESTS}" == "1" ]; then
+  buildAndPublishContainerIfItDoesNotExist $container_image_integration_tests_build buildContainerIntegrationTestsBuild
 fi
 buildAndPublishContainerIfItDoesNotExist $container_image_sdk_build buildContainerSDKBuild

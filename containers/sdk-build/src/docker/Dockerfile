@@ -38,12 +38,9 @@ RUN add-apt-repository \
 # last 5 packages installed below)
 RUN wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
 RUN add-apt-repository "deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main"
-RUN wget -qO - https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main"
 
 RUN apt-get update -y && apt-get install -y \
     autoconf \
-    az-dcap-client \
     bc \
     ccache \
     cmake \
@@ -58,6 +55,7 @@ RUN apt-get update -y && apt-get install -y \
     git \
     libboost-dev \
     libboost-system-dev \
+    libboost-thread-dev \
     libcurl4-openssl-dev \
     libgbm-dev \
     libprotobuf-c-dev \
@@ -96,19 +94,12 @@ ENV HOME                /home
 ENV USER_HOME           ${HOME}
 ENV GRADLE_USER_HOME    ${HOME}/.gradle
 ENV JAVA_HOME           /usr/lib/jvm/java-17-openjdk-amd64
-ENV SGX_SDK_VERSION     2.17
+ENV SGX_SDK_VERSION     2.18
 
 # Linux SGX mitigation binaries
 RUN curl -sSL -o /opt/as.ld.objdump.r4.tar.gz https://download.01.org/intel-sgx/sgx-linux/$SGX_SDK_VERSION/as.ld.objdump.r4.tar.gz
-RUN echo "9e4eb03442d26d38d59f47f796389ad919f33d5598dc3825dcd750b8dc55e9d2  /opt/as.ld.objdump.r4.tar.gz" | sha256sum -c -
+RUN echo "85dcba642ee951686cb01479be377dc5da0b4f1597014679d1a29162f0dc8160  /opt/as.ld.objdump.r4.tar.gz" | sha256sum -c -
 RUN tar -zxf /opt/as.ld.objdump.r4.tar.gz -C /usr/local/bin external/toolset/ubuntu20.04 --strip=3
-
-# Our custom version of dokka
-RUN curl -sSL -o /opt/dokka.zip https://github.com/R3Conclave/dokka/releases/download/r3-1.5.0-4/dokka.zip \
-    && echo "3b6e4c1bd6c4967feb40596ce7b29f31c048ebf539cd3b157f2978325ccd55eb  /opt/dokka.zip" | sha256sum -c - \
-    && mkdir -p /opt/dokka/repository/org/jetbrains/dokka/ \
-    && unzip /opt/dokka.zip -d /opt/dokka/repository/org/jetbrains/dokka/ \
-    && rm -v /opt/dokka.zip
 
 # Nexus IQ
 ENV NEXUS_IQ_HOME /opt/nexus-iq/
@@ -116,9 +107,11 @@ RUN mkdir -p $NEXUS_IQ_HOME
 RUN wget -O $NEXUS_IQ_HOME/nexus-iq-cli.jar https://download.sonatype.com/clm/scanner/nexus-iq-cli-1.131.0-01.jar
 RUN echo "f9159984056cee4576f34fcfa6f33ccab42b070e  $NEXUS_IQ_HOME/nexus-iq-cli.jar" | shasum -c -
 
-# Some incantation that's necessary to get rid of some Python errors that appear when building docs.
-# https://stackoverflow.com/a/59596814/2248578
-RUN pip3 install wheel
+ARG jep_version
+RUN pip3 install jep==$jep_version
+
+# Add jep to the library path
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/python3.8/dist-packages/jep"
 
 # Without setting the locale to UTF-8 some python3 modules just refuse to work.
 ENV LC_ALL              C.UTF-8

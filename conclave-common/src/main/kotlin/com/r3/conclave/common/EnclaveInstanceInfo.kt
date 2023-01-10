@@ -84,7 +84,7 @@ interface EnclaveInstanceInfo {
      * It's very important that related mail are created from the same post office instance, i.e. having the same topic and
      * sender key. This is so the post office can apply an increasing sequence number to each mail, which the target
      * enclave will use to make sure they are received in order and that none have been dropped (see
-     * [EnclaveMailHeader.getSequenceNumber](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail-header/get-sequence-number.html)).
+     * [EnclaveMailHeader.getSequenceNumber](https://docs.conclave.net/api/-conclave%20-core/com.r3.conclave.mail/-enclave-mail-header/get-sequence-number.html).
      *
      * For a different stream of mail create another post office with a different topic.
      */

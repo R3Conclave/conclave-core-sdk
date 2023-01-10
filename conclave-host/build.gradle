@@ -16,6 +16,7 @@ dependencies {
 
     testImplementation project(":internal-testing")
     testImplementation "org.junit.jupiter:junit-jupiter:$junit_jupiter_version"
+    testImplementation "org.junit-pioneer:junit-pioneer:$junit_pioneer_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "com.google.guava:guava:$guava_version"
 }
@@ -52,6 +53,7 @@ processResources {
                 include "libsgx_launch${simSuffix}.so"
                 rename "libsgx_launch${simSuffix}.so", "libsgx_launch${simSuffix}.so.1"
                 include "libsgx_urts${simSuffix}.so"
+                rename "libsgx_urts.so", "libsgx_urts.so.2"
                 include "libsgx_uae_service${simSuffix}.so"
                 include "libsgx_qe3.signed.so"
                 include "libsgx_id_enclave.signed.so"
@@ -80,4 +82,6 @@ processResources {
             }
         }
     }
+
+    from("${rootProject.projectDir}/scripts/gramine-seccomp.json")
 }

@@ -21,7 +21,7 @@ java -jar host.jar [options]
 
 !!!note
     If executing your project using Gradle, then arguments can be passed using the --args option. For example:
-    `./gradlew :host:run --args="--sealed-state-file=<path>"`
+    `./gradlew :host:bootRun --args="--sealed-state-file=<path>"`
 
 ### `--sealed.state.file=<path>`
 Path at which the enclave should store the sealed state containing the persistent map, if the persistent map is 
