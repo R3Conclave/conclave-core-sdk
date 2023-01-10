@@ -41,6 +41,7 @@ open class GenerateGramineBundle @Inject constructor(
         const val PYTHON_ENCLAVE_SIZE = "8G"
         const val JAVA_ENCLAVE_SIZE = "4G"
         const val DOCKER_IMAGE_ARCHITECTURE = "x86_64-linux-gnu"
+        const val SIGNING_KEY = "signing_key.pem"
     }
 
     @get:Input
@@ -67,6 +68,7 @@ open class GenerateGramineBundle @Inject constructor(
 
     override fun action() {
         enclaveJar.copyToOutputDir(GRAMINE_ENCLAVE_JAR)
+        signingKey.copyToOutputDir(SIGNING_KEY)
 
         val manifestTemplatePath = temporaryDir.resolve(MANIFEST_TEMPLATE).toPath()
         javaClass.copyResource(MANIFEST_TEMPLATE, manifestTemplatePath)
@@ -157,7 +159,7 @@ open class GenerateGramineBundle @Inject constructor(
         execCommand(
             "gramine-sgx-sign",
             "--manifest=${GRAMINE_MANIFEST}",
-            "--key=${signingKey.get().asFile.absolutePath}",
+            "--key=${SIGNING_KEY}",
             "--output=${GRAMINE_SGX_MANIFEST}"
         )
     }
