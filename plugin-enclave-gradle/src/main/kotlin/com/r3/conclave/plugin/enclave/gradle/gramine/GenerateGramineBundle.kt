@@ -127,9 +127,11 @@ open class GenerateGramineBundle @Inject constructor(
         pythonPackagesPath: String,
         manifestTemplate: Path
     ): MutableList<String> {
+        val javaHome =
+            if (pythonFile.isPresent) System.getProperty("java.home") else "/usr/lib/jvm/java-17-openjdk-amd64"
         val command = mutableListOf(
             "gramine-manifest",
-            "-Djava_home=${System.getProperty("java.home")}",
+            "-Djava_home=$javaHome",
             "-Darch_libdir=/lib/$architecture",
             "-Dld_preload=$ldPreload",
             "-Disv_prod_id=${productId.get()}",
