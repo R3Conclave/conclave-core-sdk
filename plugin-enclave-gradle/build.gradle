@@ -157,12 +157,3 @@ processResources {
         }
     }
 }
-
-jar {
-    manifest {
-        attributes(
-                "Conclave-GraalVM-Version": conclave_graal_version.toString(),
-                "Jep-Version": jep_version.toString()
-        )
-    }
-}
