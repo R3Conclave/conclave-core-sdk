@@ -9,6 +9,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 
@@ -55,8 +56,11 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
         }
     }
 
-    /** Start the call interface and allow calls to begin. */
-    fun start() {
+    /**
+     * Start the call interface and allow calls to begin.
+     * Will poll "everythingOkay".
+     */
+    fun start(everythingOkay: () -> Boolean = {true}) {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
             stateManager.transitionStateFrom<State.Ready>(to = State.Running)
@@ -64,11 +68,29 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
             try {
                 /** Wait for IO sockets, then close the server socket. */
                 serverSocket.use {
+                    /**
+                     * Attempt to receive the maximum number of concurrent calls from the enclave.
+                     * Check the enclave subprocess periodically to ensure that it's still alive.
+                     */
+                    var connectionSuccessful = false
 
-                    /** Receive the maximum number of concurrent calls from the enclave. */
-                    it.accept().use { initialSocket ->
-                        maxConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
+                    val initialConnectionThread = Thread {
+                        it.accept().use { initialSocket ->
+                            maxConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
+                        }
+                        connectionSuccessful = true
                     }
+
+                    initialConnectionThread.start()
+
+                    while (!connectionSuccessful) {
+                        check(everythingOkay()) {
+                            "Error establishing initial connection "
+                        }
+                        Thread.sleep(50)
+                    }
+
+                    initialConnectionThread.join()
 
                     /**
                      * Set up a pool of re-usable call contexts, each with their own socket.
@@ -82,7 +104,7 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
                     }
                 }
             } catch (e: Exception) {
-                stateManager.transitionStateFrom<State.Ready>(to = State.Stopped)
+                stateManager.transitionStateFrom<State.Running>(to = State.Stopped)
                 throw e
             }
         }
