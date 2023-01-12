@@ -62,6 +62,9 @@ open class GenerateGramineBundle @Inject constructor(
     @get:Input
     val maxThreads: Property<Int> = objects.property(Int::class.java)
 
+    @get:Input
+    val enclaveSize: Property<String> = objects.property(String::class.java)
+
     @get:InputFile
     val signingKey: RegularFileProperty = objects.fileProperty()
 
@@ -267,7 +270,7 @@ open class GenerateGramineBundle @Inject constructor(
             "-Denclave_mode=$enclaveMode",
             "-Denclave_worker_threads=10",
             "-Dgramine_max_threads=${maxThreads.get()}",
-            "-Denclave_size=${if (pythonFile.isPresent) PYTHON_ENCLAVE_SIZE else JAVA_ENCLAVE_SIZE}",
+            "-Denclave_size=${enclaveSize.get()}",
             manifestTemplate.absolutePathString(),
             GRAMINE_MANIFEST
         )
@@ -282,12 +285,18 @@ open class GenerateGramineBundle @Inject constructor(
      * This will create a .manifest.sgx and a .sig files into the output dir.
      */
     private fun generateSgxManifestAndSigstruct() {
-        execCommand(
-            "gramine-sgx-sign",
-            "--manifest=${GRAMINE_MANIFEST}",
-            "--key=${signingKey.get().asFile.absolutePath}",
-            "--output=${GRAMINE_SGX_MANIFEST}"
-        )
+        try {
+            val signingKeyPath = linuxExec.prepareFile(signingKey.get().asFile.toPath())
+
+            execCommand(
+                "gramine-sgx-sign",
+                "--manifest=${GRAMINE_MANIFEST}",
+                "--key=${signingKeyPath.absolutePathString()}",
+                "--output=${GRAMINE_SGX_MANIFEST}"
+            )
+        } finally {
+            linuxExec.cleanPreparedFiles()
+        }
     }
 
     /**
