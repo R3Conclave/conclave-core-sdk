@@ -14,6 +14,8 @@ object PluginUtils {
     const val GRAMINE_SGX_MANIFEST = "java.manifest.sgx"
     const val GRAMINE_SGX_TOKEN = "java.token"
     const val DOCKER_WORKING_DIR = "/project"
+    const val JLINK_CUSTOM_JDK_DIRECTORY = "custom_jdk"
+    const val SYSTEM_LIB_DIRECTORY = "custom_system_lib"
 
     /** This contains the enclave's [SgxEnclaveCss], also known as the `SIGSTRUCT`. */
     const val GRAMINE_SIGSTRUCT = "java.sig"

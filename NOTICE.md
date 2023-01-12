@@ -434,3 +434,8 @@ redistribute it freely, subject to the following restrictions:
 **[TomlJ](https://github.com/tomlj/tomlj)**
 
 Apache 2: https://github.com/tomlj/tomlj/blob/main/LICENSE
+
+**[Apache Commons Compress](https://commons.apache.org/proper/commons-compress/)**
+
+Apache 2: https://gitbox.apache.org/repos/asf?p=commons-compress.git;a=blob_plain;f=LICENSE.txt;hb=refs/heads/master
+

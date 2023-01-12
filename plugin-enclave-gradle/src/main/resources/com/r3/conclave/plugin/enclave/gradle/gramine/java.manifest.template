@@ -1,4 +1,6 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
+# Note that, when running Java enclaves, "java_home" is a relative path (as we are creating the JDK
+#  with jlink) but, when running Python enclaves, it is an absolute path. Also see GenerateGramineBundle.kt
 libos.entrypoint = "{{ java_home }}/bin/java"
 {% if enclave_mode == "RELEASE" %}
 loader.log_level = "none"
@@ -45,14 +47,20 @@ loader.env.CONCLAVE_ENCLAVE_WORKER_THREADS = "{{ enclave_worker_threads }}"
 
 fs.mounts = [
   { path = "/lib",                       uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "/tmp",                       type = "tmpfs" },
+{% if is_python_enclave == "true" %}
   { path = "{{ arch_libdir }}",          uri = "file:{{ arch_libdir }}" },
   { path = "{{ java_home }}",            uri = "file:{{ java_home }}" },
-{% if is_python_enclave == "true" %}
-  { path = "{{ python_packages_path }}", uri = "file:{{ python_packages_path }}" },
-{% endif %}
   { path = "/usr{{ arch_libdir }}",      uri = "file:/usr{{ arch_libdir }}" },
   { path = "/usr/lib",                   uri = "file:/usr/lib" },
-  { path = "/tmp",                       type = "tmpfs" },
+  { path = "{{ python_packages_path }}", uri = "file:{{ python_packages_path }}" }
+{% else %}
+    # For Java enclaves we rely on a custom build version of the JDK which will be
+    #   present in the same directory as the enclave.jar and that has a relative path
+    #   (hence we add a "/" at the beginning of the path)
+  { path = "/{{ java_home }}",           uri = "file:{{ java_home }}" },
+  { path = "/usr/lib",                   uri = "file:{{ custom_system_libdir }}usr/lib" }
+{% endif %}
 ]
 
 {% if enclave_mode == "RELEASE" %}
@@ -68,13 +76,14 @@ sgx.thread_num = {{ gramine_max_threads }}
 sgx.trusted_files = [
     "file:{{ gramine.libos }}",
     "file:{{ gramine.runtimedir() }}/",
-    "file:{{ arch_libdir }}/",
-    "file:/usr/{{ arch_libdir }}/",
     "file:{{ java_home }}/",
+    "file:enclave.jar",
 {% if ld_preload != "" %}
     "file:{{ ld_preload }}",
 {% endif %}
 {% if is_python_enclave == "true" %}
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
     "file:{{ python_packages_path }}/",
     #  This approach to retrieve the paths of Python libraries has been borrowed from Gramine PyTorch example,
     #    see: https://github.com/gramineproject/examples/blob/master/pytorch/pytorch.manifest.template
@@ -83,8 +92,11 @@ sgx.trusted_files = [
     #  This will find Ubuntu specific Python directories,
     #    such as /usr/local/lib/python3.8/dist-packages, where Numpy is also present
     "file:{{ python.get_path('stdlib', vars={'installed_base': '/usr/local'}) }}/",
-    "file:enclave.py",
+    "file:enclave.py"
+{% else %}
+    # For Java enclaves we are narrowing down the files needed to run java inside Gramine, and we provide
+    #   few extra system files in addition to the ones provided by Gramine itself.
+    "file:{{ custom_system_libdir }}"
 {% endif %}
-    "file:enclave.jar"
 ]
 
