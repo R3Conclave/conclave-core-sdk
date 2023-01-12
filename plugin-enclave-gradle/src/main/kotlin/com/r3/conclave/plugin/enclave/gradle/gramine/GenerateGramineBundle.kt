@@ -41,7 +41,6 @@ open class GenerateGramineBundle @Inject constructor(
         const val PYTHON_ENCLAVE_SIZE = "8G"
         const val JAVA_ENCLAVE_SIZE = "4G"
         const val DOCKER_IMAGE_ARCHITECTURE = "x86_64-linux-gnu"
-        const val SIGNING_KEY = "signing_key.pem"
     }
 
     @get:Input
