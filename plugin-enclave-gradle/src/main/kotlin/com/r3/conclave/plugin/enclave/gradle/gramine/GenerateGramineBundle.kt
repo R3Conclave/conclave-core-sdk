@@ -155,15 +155,15 @@ open class GenerateGramineBundle @Inject constructor(
      * This will create a .manifest.sgx and a .sig files into the output dir.
      */
     private fun generateSgxManifestAndSigstruct() {
-        signingKey.copyToOutputDir(SIGNING_KEY)
+        val signingKeyPath = linuxExec.prepareFile(signingKey.get().asFile.toPath())
+
         execCommand(
             "gramine-sgx-sign",
             "--manifest=${GRAMINE_MANIFEST}",
-            "--key=${SIGNING_KEY}",
+            "--key=${signingKeyPath.absolutePathString()}",
             "--output=${GRAMINE_SGX_MANIFEST}"
         )
-        //  We can remove the copy of the signing key so that it does not get packaged in the bundle
-        outputDir.file(SIGNING_KEY).get().asFile.toPath().deleteExisting()
+        linuxExec.cleanPreparedFiles()
     }
 
     /**
