@@ -7,8 +7,12 @@
 2. EPID attestation protocol has been deprecated, and it will be removed in an upcoming release. You should use DCAP instead.
 3. For security reasons, the way [enclave constraints](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html)
    are evaluated has changed slightly. From now on, if a client sets the security level to `INSECURE`, it will not pass
-   for `STALE` or `SECURE` enclaves. This is to prevent the client from accidently communicating with a production
+   for `STALE` or `SECURE` enclaves. This is to prevent the client from accidentally communicating with a production
    enclave during development or testing.
+4. The configuration field `enclaveSize` can be used to set the enclave size when the runtime is set to `gramine`.  The 
+   value must be always a power of two (`2G`, `4G`, `8G`, `16G`,...) and by default it is set to `4G`.
+   Please be aware that the size of the enclave must be set to at least `8G` if you decide to run python code inside the enclave
+   otherwise the enclave might fail to run.
 
 ## 1.3.1
 

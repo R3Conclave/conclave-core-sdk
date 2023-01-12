@@ -18,6 +18,8 @@ open class ConclaveExtension @Inject constructor(objects: ObjectFactory) {
     @get:Input
     val maxStackSize: Property<String> = objects.property(String::class.java).convention("2m")
     @get:Input
+    val enclaveSize: Property<String> = objects.property(String::class.java).convention("4G")
+    @get:Input
     val enablePersistentMap: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
     @get:Input
     val maxPersistentMapSize: Property<String> = objects.property(String::class.java).convention("16m")

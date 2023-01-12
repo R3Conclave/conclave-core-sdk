@@ -40,6 +40,7 @@ conclave {
     revocationLevel = 0                 // Mandatory
     maxHeapSize = "256m"
     maxStackSize = "2m"
+    enclaveSize = "4G"
     inMemoryFileSystemSize = "64m"
     persistentFileSystemSize = "0m"
     enablePersistentMap = false
@@ -188,6 +189,19 @@ thread that runs inside the enclave.
 
 !!! tip
     As with `maxHeapSize`, the size is specified in bytes but you can put a `k`, `m` or `g` after the value to
+    specify it in kilobytes, megabytes or gigabytes respectively.
+
+### enclaveSize
+_Default:_ `4G`
+
+This is an advanced setting that specifies the enclave size, and it is only relevant when the `runtime` setting
+is set to `gramine`. Keep in mind that the value must be a power of 2 (2, 4, 8, 16,...). Normally you would not need to
+specify the `enclaveSize` in your configuration since the default of 4G is sufficient for most applications. Only change
+this setting if you are seeing errors related to memory allocations when the enclave is starting up. You are advise to set the enclave size to 
+8G if you intend to run python code inside the enclave.
+
+!!! tip
+    As with `enclaveSize`, the size is specified in bytes, but you can put a `K`, `M` or `G` after the value to
     specify it in kilobytes, megabytes or gigabytes respectively.
 
 ### inMemoryFileSystemSize
