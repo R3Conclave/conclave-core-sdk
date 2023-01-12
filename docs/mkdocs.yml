@@ -44,15 +44,15 @@ nav:
   - Release notes: release-notes.md
   - Operations:
     - Server deployment:
-        - Azure deployment: machine-setup.md
-        - Non-cloud deployment: non-cloud-deployment.md
+      - Azure deployment: machine-setup.md
     - Upgrades:
       - Enclave signing: signing.md
       - Renewability: renewability.md
   - FAQ: faq.md
 
 theme:
-  name: 'material'
+  name: material
+  logo: images/core_logo_no_shadow.svg
   features:
     - navigation.tabs
     - navigation.instant

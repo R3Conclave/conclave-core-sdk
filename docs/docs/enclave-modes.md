@@ -17,11 +17,11 @@ Only release mode locks out the host and provides the standard SGX security mode
 ## System requirements
 The table below summarizes which modes can be used in which environments.
 
-| OS      | Mock               | Simulation                                   | Debug                     | Release                  |
-|---------|:------------------:|:--------------------------------------------:|:-------------------------:|:------------------------:|
-| Linux   | :heavy_check_mark: | :heavy_check_mark:                           | :heavy_check_mark:        | :heavy_check_mark:       |
-| macOS   | :heavy_check_mark: | :heavy_check_mark::fontawesome-brands-linux: | :heavy_multiplication_x:  | :heavy_multiplication_x: |
-| Windows | :heavy_check_mark: | :heavy_check_mark::fontawesome-brands-linux: | :heavy_multiplication_x:  | :heavy_multiplication_x: |
+| OS                                                           | Mock               | Simulation                                   | Debug                     | Release                  |
+|--------------------------------------------------------------|:------------------:|:--------------------------------------------:|:-------------------------:|:------------------------:|
+| Linux (Use 5.11 or higher, which has in-kernel SGX support.) | :heavy_check_mark: | :heavy_check_mark:                           | :heavy_check_mark:        | :heavy_check_mark:       |
+| macOS                                                        | :heavy_check_mark: | :heavy_check_mark::fontawesome-brands-linux: | :heavy_multiplication_x:  | :heavy_multiplication_x: |
+| Windows                                                      | :heavy_check_mark: | :heavy_check_mark::fontawesome-brands-linux: | :heavy_multiplication_x:  | :heavy_multiplication_x: |
 
 !!! info
     :fontawesome-brands-linux:: Using WSL or Docker. For
@@ -69,8 +69,7 @@ We test building and running release-mode enclaves on Ubuntu 20.04 LTS Server x8
 === "macOS / Windows"
     **Running** debug and release mode enclaves is not possible on macOS or Windows.
 === "Linux"
-    **Running** debug and release mode enclaves requires SGX hardware and an installation of the Intel
-    SGX driver stack. See [non-cloud deployment](non-cloud-deployment.md) for instructions.
+    **Running** debug and release mode enclaves requires an SGX-supported VM. Refer [Azure Deployment](machine-setup.md) for instructions.
 
 ## Set the enclave mode
 You can choose the mode when declaring a dependency on an enclave module in Gradle. For example, you might add

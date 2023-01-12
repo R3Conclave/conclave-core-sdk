@@ -1,0 +1,25 @@
+{
+  "enclaveIdentity":{
+    "id":"QE",
+    "version":2,
+    "issueDate":"2019-09-05T07:47:08Z",
+    "nextUpdate":"2029-09-05T07:47:08Z",
+    "tcbEvaluationDataNumber":0,
+    "miscselect":"D182B18C",
+    "miscselectMask":"FFFFFFFF",
+    "attributes":"70C8CBF48BD76EAB9C8126CE95E96C90",
+    "attributesMask":"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+    "mrsigner":"8C4F5775D796503E96137F77C68A829A0056AC8DED70140B081B094490C57BFF",
+    "isvprodid":1,
+    "tcbLevels":[
+      {
+        "tcb":{
+          "isvsvn":1
+        },
+        "tcbDate":"2019-09-01T00:00:00Z",
+        "tcbStatus":"UpToDate"
+      }
+    ]
+  },
+  "signature":"01020304"
+}
