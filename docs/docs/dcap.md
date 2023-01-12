@@ -1,87 +1,80 @@
-## The DCAP protocol
+# The DCAP protocol
 
-Conclave only supports the most recent DCAP attestation protocol; the old EPID attestation protocol is not supported anymore.
-You may also see DCAP referred to as "ECDSA attestation".
+Intel SGX uses the Data Center Attestation Primitives (DCAP) protocol to provide proof to clients about the state of an
+enclave. DCAP is also known as _ECDSA attestation_.
 
-In DCAP, repeated attestation requests aren't forwarded to Intel, but rather served from a cache. A newly installed
-machine obtains a machine certificate from Intel via the cache, which may then be persisted to disk. All this is
-automated for you.
+## Provisioning Certificate Caching Service
 
-As cloud providers run caches, DCAP supports vendor-specific plugins. Intel provides a default one
-which requires a [subscription](https://api.portal.trustedservices.intel.com/provisioning-certification).
+In DCAP, repeated attestation requests are served from a cache rather than sent directly to Intel. This cache is known
+as the Provisioning Certificate Caching Service (PCCS). A newly installed machine obtains a machine certificate from
+Intel via the PCCS, which may then be persisted to disk. This process is automatic.
 
-Azure provides a DCAP [plugin](https://github.com/microsoft/Azure-DCAP-Client) that does not require a subscription. Conclave
-bundles and uses Azure's DCAP plugin by default. The Azure caches are open to the public internet and can be used from anywhere. Azure Confidential Computing instances like DC4s_v3 come pre-provisioned for DCAP and as Conclave
-comes with the necessary libraries bundled, you don't need to do any further setup.
+The PCCS is typically operated as an organisation-wide service. For example, Microsoft provides a PCCS service for users
+of the Azure cloud platform.
 
-### DCAP Plugin
-To perform attestation using DCAP, Conclave needs a way to gather information about the platform the enclave is hosted on. This information provides proof from Intel that the system supports SGX and that it is patched and up to date.
+## DCAP Client
 
-DCAP is designed to work on many different server topologies. So, rather than directly connecting to Intel services to retrieve this information, the cloud vendor or the owner of the SGX system must provide a DCAP client plugin with the required information. Intel provides a generic DCAP client plugin as part of the DCAP runtime. To use this, you also need to set up a Provisioning Certificate Caching Service (PCCS). Intel provides an example and some instructions [here](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs/README.md). If you would like to use Intel's reference implementation of their [PCCS service](https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/master/QuoteGeneration/pccs), then additional work may be required to provide data in the correct format for Conclave. Please contact R3 support if you need to set this up.
+In addition to the PCCS, the DCAP protocol also makes use of a DCAP client (sometimes called a DCAP "plugin") which
+is designed to work with a corresponding caching service. The client is also responsible for gathering information
+about the platform that the enclave is running on, such as SGX support and whether there are any patches available for
+it.
 
-Microsoft has written a DCAP client plugin that works with its Azure Confidential Compute virtual machines. In fact, it also works outside of Azure for single CPU systems, but this may not always be the case.
+Microsoft maintains a [DCAP client](https://github.com/microsoft/Azure-DCAP-Client) for use with the Azure PCCS.
 
-Conclave's bundled Azure client plugin will *only* be used if no other plugin has been found on the system.
-The runtime will use the first `.so` it encounters in the search order below:
+### Conclave-Azure Bundled Client
+
+The Microsoft Azure PCCS is open to the internet and accessible to machines outside the Azure cloud. Conclave makes use
+of this by bundling a copy of the Azure DCAP plugin with the Conclave SDK. If no DCAP client is installed on the host
+system, then Conclave will use the bundled Azure DCAP client.
+
+Conclave will search the following paths for system installed DCAP Clients:
+
 ```
 /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1
 /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so
 /usr/lib/libdcap_quoteprov.so.1
 /usr/lib/libdcap_quoteprov.so
 ```
-Should you decide to use a bundled version (recommended), ensure the files listed above don't exist (delete or rename
-them if necessary).
 
-!!!Important
+If none of these files are present, then the bundled client will be used.
 
-    The bundled DCAP Azure client plugin works with all current generation Azure confidential VMs, as well as existing
-    CPUs. However, if Azure extends their offerings to include new platforms, or if you use a new generation system, 
-    then the bundled Azure client plugin may throw an error when attempting to load your enclave. In this case,
-    [follow the instructions below](#azure-client-plugin) to build/install an updated version of the Azure client 
-    plugin that supports the platform.
+This is the recommended way to use Conclave on Azure virtual machines, but may also be used to host enclaves outside
+the Azure cloud. It requires no additional setup.
 
-You may want to set the Azure DCAP client logging level to FATAL as the default setting is quite verbose:
+If using the Azure DCAP Client and PCCS, you may also want to set the Azure DCAP client logging level to FATAL, as the
+default setting is quite verbose:
+
 ```sh
-export AZDCAP_DEBUG_LOG_LEVEL=FATAL
+export AZDCAP_DEBUG_LOG_LEVEL=ERROR
 ```
 
-If you are using the bundled version, you can skip the rest of this section. Otherwise, read on for instructions on how to manually configure the DCAP plugin.
+Other configuration options for the Azure DCAP client are documented [here](https://github.com/microsoft/Azure-DCAP-Client).
 
-#### Azure client plugin
+### Intel DCAP Client & PCCS
 
-* Identify the currently installed DCAP client plugin. It will always have one of the following names: `libdcap_quoteprov.so.1` or `libdcap_quoteprov.so`. You might find other similarly named files, but they won't be used as a plugin.
-```sh
-ls /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so*
-ls /usr/lib/libdcap_quoteprov.so*
+Intel provides reference DCAP client and PCCS implementations. If you do not want to rely on externally hosted services
+for attestation, such as the Azure PCCS, you can set up your own PCCS based on the Intel implementation. This requires
+that you create an account with Intel and generate an API key so that your PCCS can communicate with the Intel
+provisioning servers.
+
+Full Installation instructions for the Intel PCCS and DCAP client can be found on
+[Intel's website](https://www.intel.com/content/www/us/en/developer/articles/guide/intel-software-guard-extensions-data-center-attestation-primitives-quick-install-guide.html).
+
+Once installed, Conclave will load the Intel DCAP client rather than the bundled Azure client.
+
+This is the recommended approach for applications that will run outside the Azure cloud.
+
+### Azure DCAP Client
+
+Although Conclave bundles the Azure DCAP client, it may also be installed directly from Microsoft's repositories:
+
+```
+wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+echo 'deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main' | sudo tee /etc/apt/sources.list.d/msprod.list
+sudo apt-get install az-dcap-client
 ```
 
-* If you already have the Azure plugin installed then it will contain the text 'AZDCAP'.
-```sh
-grep AZDCAP /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so*
-grep AZDCAP /usr/lib/libdcap_quoteprov.so*
-```
-* If the Azure plugin is not currently installed then:
-    * You can build it from [source](https://github.com/microsoft/Azure-DCAP-Client).
-    * Or extract from a pre-built package provided by Microsoft. E.g. for Ubuntu 20.04 via the command below (only libdcap_quoteprov.so is required).
-```sh
-wget https://packages.microsoft.com/ubuntu/20.04/prod/pool/main/a/az-dcap-client/az-dcap-client_1.11.2_amd64.deb && ar x az-dcap-client_1.11.2_amd64.deb data.tar.xz && tar xvJf data.tar.xz --transform='s/.*\///' ./usr/lib/libdcap_quoteprov.so && rm az-dcap-client_1.11.2_amd64.deb data.tar.xz
-```
-* The preferred name and location of the DCAP client plugin is `/usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1`.
-```sh
-cp $(Azure-DCAP-Client)/libdcap_quoteprov.so /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.azure
-ln -sf /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.azure /usr/lib/x86_64-linux-gnu/libdcap_quoteprov.so.1
-```
-* Set the Azure DCAP client logging level to FATAL as desired.
-```sh
-export AZDCAP_DEBUG_LOG_LEVEL=FATAL
-```
-#### Intel DCAP plugin
-Please read the installation instructions in the "Install the DCAP packages" section of the [installation guide](https://download.01.org/intel-sgx/sgx-dcap/1.8/linux/docs/Intel_SGX_DCAP_Linux_SW_Installation_Guide.pdf).
-
-!!!Note
-
-    If you have the Intel DCAP plugin installed alongside the Azure one, remember that running `apt update` might 
-    reset the symlink above to point to Intel's plugin.
+Once installed, Conclave will load the system installed DCAP client rather than the bundled one.
 
 ## Using Docker container(s)
 If you plan to use a Docker container with DCAP hardware, you must map two different device files like this:
@@ -93,15 +86,14 @@ docker run --device /dev/sgx_enclave --device /dev/sgx_provision ...
 !!!Note
 
     Azure offers a "Confidential Kubernetes" service. At this time, we haven't tested Conclave with that. If you try it,
-    let us and the community know if it works (conclave-discuss@groups.io)
+    [let us and the community know](conclave-discuss@groups.io) if it works.
 
 ## Running a Conclave Application
-After setting up the machine, you can follow the [Compiling and running](running-hello-world.md) tutorial to run the `hello-world` sample.
+After setting up the machine, you can follow the [Compiling and running](running-hello-world.md) tutorial to run the
+`hello-world` sample.
 
-The sample is configured to use DCAP attestation with the
-following line in `Host.java`
+The sample is configured to use DCAP attestation with the following line in `Host.java`:
+
 ```java
 enclave.start(new AttestationParameters.DCAP(), ... );
 ```
-
-DCAP doesn't require specific API keys or parameters, so just creating the empty object is sufficient to choose it.

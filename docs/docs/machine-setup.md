@@ -1,5 +1,7 @@
 # Deploying to Azure
-The most efficient way to deploy a Conclave application is to use an Azure virtual machine.
+
+The most efficient way to deploy a Conclave application is to use an Azure virtual machine. However, if you like 
+to know about on-premise deployment, please [reach out to us on discord](https://discord.gg/zpHKkMZ8Sw).
 
 ## Attestation
 

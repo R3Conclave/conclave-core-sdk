@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.utilities.internal.toHexString
 import com.r3.conclave.common.EnclaveMode
 import com.r3.conclave.common.SHA256Hash
 import com.r3.conclave.common.internal.Cursor
@@ -13,6 +14,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputFile
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.readBytes
@@ -23,8 +25,15 @@ open class GenerateEnclaveMetadata @Inject constructor(
     private val enclaveMode: EnclaveMode,
     private val linuxExec: LinuxExec
 ) : ConclaveTask() {
+
     @get:InputFile
     val inputSignedEnclave: RegularFileProperty = objects.fileProperty()
+
+    @get:OutputFile
+    val mrsignerOutputFile: RegularFileProperty = objects.fileProperty()
+
+    @get:OutputFile
+    val mrenclaveOutputFile: RegularFileProperty = objects.fileProperty()
 
     @get:Input
     val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
@@ -59,6 +68,13 @@ open class GenerateEnclaveMetadata @Inject constructor(
         }
 
         val enclaveMetadata = Cursor.wrap(SgxEnclaveCss, metadataFile.readBytes())
+
+        val mrsigner = enclaveMetadata[key].mrsigner
+        val mrencalve = SHA256Hash.get(enclaveMetadata[body][enclaveHash].read())
+
+        mrsignerOutputFile.asFile.get().writeText(mrsigner.bytes.toHexString().uppercase())
+        mrenclaveOutputFile.asFile.get().writeText(mrencalve.bytes.toHexString().uppercase())
+
         logger.lifecycle("Enclave code hash:   ${SHA256Hash.get(enclaveMetadata[body][enclaveHash].read())}")
         logger.lifecycle("Enclave code signer: ${enclaveMetadata[key].mrsigner}")
 

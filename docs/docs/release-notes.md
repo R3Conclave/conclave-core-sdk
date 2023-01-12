@@ -6,9 +6,16 @@
     [SGX SDK 2.18 release notes](https://github.com/intel/linux-sgx/releases/tag/sgx_2.18) for more details.
 2. EPID attestation protocol has been deprecated, and it will be removed in an upcoming release. You should use DCAP instead.
 3. For security reasons, the way [enclave constraints](api/-conclave%20-core/com.r3.conclave.common/-enclave-constraint/index.html)
-   are evaluated has changed slightly. From now on, if a client sets the security level to `INSECURE`, it will not pass 
-   for `STALE` or `SECURE` enclaves. This is to prevent the client from accidently communicating with a production 
+   are evaluated has changed slightly. From now on, if a client sets the security level to `INSECURE`, it will not pass
+   for `STALE` or `SECURE` enclaves. This is to prevent the client from accidently communicating with a production
    enclave during development or testing.
+
+## 1.3.1
+
+1. To make deploying enclaves built with Conclave easier, files containing the enclave code hash and signer are now
+  generated when an enclave is built. See [here](enclave-configuration.md#enclave-build-process) for more information.
+2. Added support for the Intel PCCS (Provisioning certificate caching service) and Intel DCAP plugin. See
+  [here](dcap.md#intel-dcap-client--pccs) for more information.
 
 ## 1.3
 
@@ -18,15 +25,15 @@
 2. The SDK artifacts are now available on [Maven Central](https://search.maven.org/search?q=conclave). There's no
    longer any need to have a local repo directory in your Conclave project. See the
    [API changes page](api-changes.md#maven-central) for more details.
-3. The Core SDK powers our new Conclave Cloud platform. Head over to [conclave.cloud](https://conclave.cloud) to learn 
+3. The Core SDK powers our new Conclave Cloud platform. Head over to [conclave.cloud](https://conclave.cloud) to learn
    more.
 4. :jigsaw: **New feature!** The Conclave Key Derivation Service (KDS) is out of beta and now supports production
    workloads. The REST API docs can be found [here](kds-rest-api.md).
-5. :jigsaw: **New feature!** Support for stable enclave encryption keys with Mail by using the KDS. This enables use 
-   cases where the enclave can restart or move to a different physical machine without affecting the client. It also 
+5. :jigsaw: **New feature!** Support for stable enclave encryption keys with Mail by using the KDS. This enables use
+   cases where the enclave can restart or move to a different physical machine without affecting the client. It also
    enables horizontally-scaled enclave solutions. See the API docs for the new
    [KDS post office](api/-conclave%20-core/com.r3.conclave.client/-post-office-builder/using-k-d-s.html) for more details.
-6. :jigsaw: **Java 17** is now supported inside the enclave. There's no need to configure anything. Just ensure 
+6. :jigsaw: **Java 17** is now supported inside the enclave. There's no need to configure anything. Just ensure
    you're using JDK 17 when building your enclave to benefit from the new language features.
 7. Exceptions thrown during enclave startup in release mode now propagate to the host. This provides better feedback if
    the enclave is unable to start.
@@ -35,15 +42,15 @@
 10. Intel SGX SDK has been updated to 2.17.1. This provides bug fixes, security updates, and other improvements. See the
     [SGX SDK release notes](https://github.com/intel/linux-sgx/releases) for more details.
 11. Conclave now supports Ubuntu 20.04 LTS and 18.04 LTS. 16.04 LTS is no longer supported.
-12. We've introduced the concept of beta APIs to facilitate quick iterative feedback on APIs before they're finalized. 
-    Anything annotated with [`@Beta`](api/-conclave%20-core/com.r3.conclave.common/-beta/index.html) is subject to change 
+12. We've introduced the concept of beta APIs to facilitate quick iterative feedback on APIs before they're finalized.
+    Anything annotated with [`@Beta`](api/-conclave%20-core/com.r3.conclave.common/-beta/index.html) is subject to change
     and may even be removed in a later release.
 13. :jigsaw: **Beta feature** New API method which creates an attestation quote with custom report data, for use with
     external SGX-enabled applications which require a signed quote with specific content. See
     [`Enclave.createAttestationQuote`](api/-conclave%20-core/com.r3.conclave.enclave/-enclave/create-attestation-quote.html)
     for more information.
-14. We have added Intel advisory IDs to DCAP-based attestation reports. These provide more information on any 
-    platform vulnerabilites that may be present on the system.
+14. We have added Intel advisory IDs to DCAP-based attestation reports. These provide more information on any
+    platform vulnerabilities that may be present on the system.
 
 Please read the list of [known issues](known-issues.md).
 

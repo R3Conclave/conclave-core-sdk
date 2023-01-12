@@ -27,11 +27,15 @@ data class QuoteCollateral(
 
     val tcbInfoIssuerChain: CertPath by lazy { parseCertPath(rawTcbInfoIssuerChain) }
 
-    val signedTcbInfo: SignedTcbInfo by lazy { parseJson(rawSignedTcbInfo) }
+    val signedTcbInfo: SignedTcbInfo by lazy {
+        SignedTcbInfo.fromJson(attestationObjectMapper.readTree(rawSignedTcbInfo.inputStream()))
+    }
 
     val qeIdentityIssuerChain: CertPath by lazy { parseCertPath(rawQeIdentityIssuerChain) }
 
-    val signedQeIdentity: SignedEnclaveIdentity by lazy { parseJson(rawSignedQeIdentity) }
+    val signedQeIdentity: SignedEnclaveIdentity by lazy {
+        SignedEnclaveIdentity.fromJson(attestationObjectMapper.readTree(rawSignedQeIdentity.inputStream()))
+    }
 
     private fun parseCertPath(bytes: OpaqueBytes): CertPath {
         return AttestationUtils.parsePemCertPath(bytes.inputStream())
@@ -39,10 +43,6 @@ data class QuoteCollateral(
 
     private fun parseCRL(bytes: OpaqueBytes): X509CRL {
         return CertificateFactory.getInstance("X.509").generateCRL(bytes.inputStream()) as X509CRL
-    }
-
-    private inline fun <reified T> parseJson(bytes: OpaqueBytes): T {
-        return attestationObjectMapper.readValue(bytes.inputStream(), T::class.java)
     }
 
     fun serialiseTo(dos: DataOutputStream) {

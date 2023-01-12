@@ -427,6 +427,19 @@ JNIEXPORT jint JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteDCAP(JN
     return (int)eval_result;
 }
 
+jbyteArray jbyteArrayFromCharPtr(JNIEnv *jniEnv, unsigned int size, char* data) {
+    if (size < 1) {
+        raiseException(jniEnv, "Failed to create byte array, data too short.");
+    }
+    if (data == nullptr) {
+        raiseException(jniEnv, "Failed to create byte array, data is null.");
+    }
+    unsigned int sizeActual = size - 1; // Drop the \0 terminator
+    jbyteArray array = jniEnv->NewByteArray(sizeActual);
+    jniEnv->SetByteArrayRegion(array, 0, sizeActual, (jbyte*)data);
+    return array;
+}
+
 JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuoteCollateral(JNIEnv *jniEnv,
                                                                                             jclass,
                                                                                             jbyteArray fmspc,
@@ -437,7 +450,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
     std::lock_guard<std::mutex> lock(dcap_mutex);
 
     quote3_error_t eval_result_get;
-    auto collateral = quoting_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result_get);
+    sgx_ql_qve_collateral_t* collateral = quoting_lib->get_quote_verification_collateral(p_fmspc.ptr, pck_ca_type, eval_result_get);
 
     if (collateral == nullptr){
         raiseException(jniEnv, getQuotingErrorMessage(eval_result_get));
@@ -466,15 +479,13 @@ JNIEXPORT jobjectArray JNICALL Java_com_r3_conclave_host_internal_Native_getQuot
         jobject wrappedVersion = jniEnv->NewObject(integerClass, integerConstructor, static_cast<jint>(collateral->version));
 
         jniEnv->SetObjectArrayElement(arr,0,wrappedVersion);
-        // TODO Convert the collateral fields to byte arrays, rather than Strings (which are converted back to bytes
-        //      anyway in the Kotlin code)
-        jniEnv->SetObjectArrayElement(arr,1,jniEnv->NewStringUTF(collateral->pck_crl_issuer_chain));
-        jniEnv->SetObjectArrayElement(arr,2,jniEnv->NewStringUTF(collateral->root_ca_crl));
-        jniEnv->SetObjectArrayElement(arr,3,jniEnv->NewStringUTF(collateral->pck_crl));
-        jniEnv->SetObjectArrayElement(arr,4,jniEnv->NewStringUTF(collateral->tcb_info_issuer_chain));
-        jniEnv->SetObjectArrayElement(arr,5,jniEnv->NewStringUTF(collateral->tcb_info));
-        jniEnv->SetObjectArrayElement(arr,6,jniEnv->NewStringUTF(collateral->qe_identity_issuer_chain));
-        jniEnv->SetObjectArrayElement(arr,7,jniEnv->NewStringUTF(collateral->qe_identity));
+        jniEnv->SetObjectArrayElement(arr,1,jbyteArrayFromCharPtr(jniEnv, collateral->pck_crl_issuer_chain_size, collateral->pck_crl_issuer_chain));
+        jniEnv->SetObjectArrayElement(arr,2,jbyteArrayFromCharPtr(jniEnv, collateral->root_ca_crl_size, collateral->root_ca_crl));
+        jniEnv->SetObjectArrayElement(arr,3,jbyteArrayFromCharPtr(jniEnv, collateral->pck_crl_size, collateral->pck_crl));
+        jniEnv->SetObjectArrayElement(arr,4,jbyteArrayFromCharPtr(jniEnv, collateral->tcb_info_issuer_chain_size, collateral->tcb_info_issuer_chain));
+        jniEnv->SetObjectArrayElement(arr,5,jbyteArrayFromCharPtr(jniEnv, collateral->tcb_info_size, collateral->tcb_info));
+        jniEnv->SetObjectArrayElement(arr,6,jbyteArrayFromCharPtr(jniEnv, collateral->qe_identity_issuer_chain_size, collateral->qe_identity_issuer_chain));
+        jniEnv->SetObjectArrayElement(arr,7,jbyteArrayFromCharPtr(jniEnv, collateral->qe_identity_size, collateral->qe_identity));
         
         quote3_error_t eval_result_free;
         
