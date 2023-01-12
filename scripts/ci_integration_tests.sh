@@ -15,7 +15,7 @@ runtimeType=${2,,}
 
 # Check the entered enclave mode and runtime type
 [[ "mock simulation debug release" =~ (^|[[:space:]])$enclaveMode($|[[:space:]]) ]] && echo $enclaveMode || ( echo "Wrong enclave mode entered: $enclaveMode."; exit 1 )
-[[ "graalvm gramine" =~ (^|[[:space:]])$runtimeType($|[[:space:]]) ]] && echo runtimeType || ( echo "Wrong runtime type entered: $runtimeType."; exit 1 )
+[[ "graalvm gramine" =~ (^|[[:space:]])$runtimeType($|[[:space:]]) ]] && echo $runtimeType || ( echo "Wrong runtime type entered: $runtimeType."; exit 1 )
 
 if [ "$enclaveMode" != "simulation" ] && [ "$runtimeType" == "gramine" ]; then
     # Hardware tests for Gramine need the AESM service running.
