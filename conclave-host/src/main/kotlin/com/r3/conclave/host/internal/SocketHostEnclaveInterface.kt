@@ -84,14 +84,16 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
 
                     initialConnectionThread.start()
 
-                    while (!connectionSuccessful) {
-                        check(everythingOkay()) {
-                            "Error establishing connection with enclave subprocess"
+                    try {
+                        while (!connectionSuccessful) {
+                            check(everythingOkay()) {
+                                "Error establishing connection with enclave subprocess"
+                            }
+                            Thread.sleep(50)
                         }
-                        Thread.sleep(50)
+                    } finally {
+                        initialConnectionThread.join()
                     }
-
-                    initialConnectionThread.join()
 
                     /**
                      * Set up a pool of re-usable call contexts, each with their own socket.
