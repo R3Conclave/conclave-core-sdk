@@ -1,5 +1,5 @@
 ext {
-    conclave_version = '1.4-SNAPSHOT'
+    conclave_version = '1.4-BETA'
     // Rather than appending $conclave_version here, we hard code it so the SDK and conclave-graalvm
     // versions can go out of sync.
     conclave_graal_version = '22.0.0.2-1.4-SNAPSHOT'
