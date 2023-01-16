@@ -19,7 +19,6 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         curl \
         apt-transport-https \
         openjdk-17-jdk-headless
-# Also update java home in GenerateGramineBundle.kt
 ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
 
 # Add Gramine to Ubuntu repositories

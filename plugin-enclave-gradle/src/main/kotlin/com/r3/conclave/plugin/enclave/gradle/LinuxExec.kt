@@ -1,5 +1,6 @@
 package com.r3.conclave.plugin.enclave.gradle
 
+import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAMINE
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
 import com.r3.conclave.utilities.internal.copyResource
@@ -35,7 +36,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
     val buildInDocker: Property<Boolean> = objects.property(Boolean::class.java)
 
     @get:Input
-    val runtimeType: Property<GradleEnclavePlugin.RuntimeType> = objects.property(GradleEnclavePlugin.RuntimeType::class.java)
+    val runtimeType: Property<RuntimeType> = objects.property(RuntimeType::class.java)
 
     override fun action() {
         // This task should be set as a dependency of any task that requires executing a command in the context
@@ -47,7 +48,8 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
             val conclaveBuildDir = temporaryDir.toPath() / "conclave-build"
             LinuxExec::class.java.copyResource("/conclave-build/Dockerfile", conclaveBuildDir / "Dockerfile")
 
-            runDockerCommand(listOf(
+            runDockerCommand(
+                listOf(
                     "docker",
                     "build",
                     "--tag", tag.get(),
@@ -59,7 +61,10 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         }
     }
 
-    private fun runDockerCommand(dockerCommand: List<Any?>, commandLineConfig: CommandLineConfig = CommandLineConfig()): ExecResult {
+    private fun runDockerCommand(
+        dockerCommand: List<Any?>,
+        commandLineConfig: CommandLineConfig = CommandLineConfig()
+    ): ExecResult {
         try {
             return commandLine(dockerCommand, commandLineConfig)
         } catch (e: Exception) {
@@ -90,7 +95,7 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         // Gramine enclaves are always built in a Docker container, apart from Python enclaves.
         // TODO: CON-1229 - Build Python Gramine enclaves inside the conclave-build container.
         // GraalVM enclaves are built in a Docker container by default, but the user can opted out by setting the buildInDocker config to "false"
-        return !OperatingSystem.current().isLinux || (buildInDocker.get() && !isPythonEnclave) || (runtimeType.get() == GradleEnclavePlugin.RuntimeType.GRAMINE && !isPythonEnclave)
+        return !OperatingSystem.current().isLinux || (buildInDocker.get() && !isPythonEnclave) || (runtimeType.get() == GRAMINE && !isPythonEnclave)
     }
 
     /**
