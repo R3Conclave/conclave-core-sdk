@@ -7,6 +7,7 @@ import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.io.Closeable
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.lang.IllegalStateException
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketTimeoutException
@@ -85,7 +86,7 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
 
                     while (!connectionSuccessful) {
                         check(everythingOkay()) {
-                            "Error establishing initial connection "
+                            "Error establishing connection with enclave subprocess"
                         }
                         Thread.sleep(50)
                     }
