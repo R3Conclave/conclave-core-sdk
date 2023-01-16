@@ -23,6 +23,9 @@ import com.r3.conclave.mail.internal.MailDecryptingStream
 import com.r3.conclave.mail.internal.noise.protocol.Noise
 import com.r3.conclave.mail.internal.readEnclaveStateId
 import com.r3.conclave.utilities.internal.*
+import java.io.IOException
+import java.io.OutputStream
+import java.io.PrintStream
 import java.io.UTFDataFormatException
 import java.lang.IllegalStateException
 import java.nio.ByteBuffer
@@ -242,6 +245,18 @@ abstract class Enclave {
     @PotentialPackagePrivate
     private fun initialise(env: EnclaveEnvironment) {
         this.env = env
+
+        // Prevent users from printing to the console when running the enclave in release mode
+        // GraalVM already discards the output so the following if statement is only relevant for GramineSGX
+        // N.B. The developer of the enclave can still override the configuration below and print to the console
+        // when running the enclave in release mode. But that has to be a conscious decision.
+        if (env.enclaveMode == EnclaveMode.RELEASE && env is GramineSGXEnclaveEnvironment) {
+            // The object should be nullOutputStream instead but Conclave must support Java 8
+            val nullOut = PrintStream(NullOutputStream)
+            System.setOut(nullOut);
+            System.setErr(nullOut);
+        }
+
         initCryptography()
 
         env.hostInterface.apply {
@@ -254,6 +269,14 @@ abstract class Enclave {
         }
 
         env.setEnclaveInfo(signatureKey, encryptionKeyPair)
+    }
+
+    private object NullOutputStream : OutputStream() {
+        override fun write(b: Int) {
+        }
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
+        }
     }
 
     /**
