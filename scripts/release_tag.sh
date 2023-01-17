@@ -3,7 +3,7 @@ set -euo pipefail
 
 [ "$#" = 1 ] || ( echo "Expecting a single argument specifying the intended release tag" && exit 1)
 RELEASE=$1
-[[ "$RELEASE" =~ ^[0-9]+[.][0-9]+(-rc[0-9]+)?$ ]] || (echo "Unexpected release version '$RELEASE', must be of the form 'X.Y' or X.Y-rcZ" && exit 1)
+[[ "$RELEASE" =~ ^[0-9]+[.][0-9]+((-rc[0-9]+)|-beta[0-9]+)?$ ]] || (echo "Unexpected release version '$RELEASE', must be of the form 'X.Y' or 'X.Y-rcZ' or 'X.Y-BETA'" && exit 1)
 RELEASE_SPLIT=(${RELEASE//./ })
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)

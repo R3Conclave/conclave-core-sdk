@@ -52,7 +52,8 @@ String getConclaveRevision() {
 enum VersionType {
     GA_RELEASE,
     RELEASE_CANDIDATE,
-    SNAPSHOT
+    SNAPSHOT,
+    BETA
 }
 
 ext {
@@ -63,6 +64,8 @@ ext {
         versionType = VersionType.SNAPSHOT
     } else if (version.matches(/.+\-RC[0-9]+$/)) {
         versionType = VersionType.RELEASE_CANDIDATE
+    } else if (version.matches(/.+\-beta[0-9]+$/)) {
+        versionType = VersionType.BETA
     } else {
         versionType = VersionType.GA_RELEASE
     }
@@ -407,7 +410,7 @@ for (publishedProject in publishedProjects) {
 
         repositories {
             //  This repository is used for publishing to Maven Central from TeamCity.
-            if (versionType == VersionType.GA_RELEASE) {
+            if (versionType == VersionType.GA_RELEASE || versionType == VersionType.BETA) {
                 maven {
                     name = "OSSRH"
                     url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
