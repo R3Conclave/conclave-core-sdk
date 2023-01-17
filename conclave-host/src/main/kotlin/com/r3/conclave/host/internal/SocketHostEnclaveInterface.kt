@@ -13,6 +13,7 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * This class is a streaming socket based implementation of the [HostEnclaveInterface].
@@ -73,19 +74,19 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
                      * Attempt to receive the maximum number of concurrent calls from the enclave.
                      * Check the enclave subprocess periodically to ensure that it's still alive.
                      */
-                    var connectionSuccessful = false
+                    val connectionSuccessful = AtomicBoolean(false)
 
                     val initialConnectionThread = Thread {
                         it.accept().use { initialSocket ->
                             maxConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
                         }
-                        connectionSuccessful = true
+                        connectionSuccessful.set(true)
                     }
 
                     initialConnectionThread.start()
 
                     try {
-                        while (!connectionSuccessful) {
+                        while (!connectionSuccessful.get()) {
                             check(everythingOkay()) {
                                 "Error establishing connection with enclave subprocess"
                             }
