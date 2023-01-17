@@ -69,7 +69,7 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
 
             try {
                 /** Wait for IO sockets, then close the server socket. */
-                serverSocket.use {
+                serverSocket.use {serverSocket ->
                     /**
                      * Attempt to receive the maximum number of concurrent calls from the enclave.
                      * Check the enclave subprocess periodically to ensure that it's still alive.
@@ -77,7 +77,7 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
                     val connectionSuccessful = AtomicBoolean(false)
 
                     val initialConnectionThread = Thread {
-                        it.accept().use { initialSocket ->
+                        serverSocket.accept().use { initialSocket ->
                             maxConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
                         }
                         connectionSuccessful.set(true)
@@ -102,7 +102,7 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
                      */
                     callContextPool = ArrayBlockingQueue(maxConcurrentCalls + 1)
                     for (i in 0 until maxConcurrentCalls) {
-                        val socket = it.accept().apply { tcpNoDelay = true }
+                        val socket = serverSocket.accept().apply { tcpNoDelay = true }
                         val callContext = EnclaveCallContext(socket)
                         callContextPool.put(callContext)
                     }
