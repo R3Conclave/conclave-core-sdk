@@ -7,10 +7,13 @@ import com.r3.conclave.utilities.internal.writeIntLengthPrefixBytes
 import java.io.Closeable
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.lang.IllegalStateException
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * This class is a streaming socket based implementation of the [HostEnclaveInterface].
@@ -55,19 +58,42 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
         }
     }
 
-    /** Start the call interface and allow calls to begin. */
-    fun start() {
+    /**
+     * Start the call interface and allow calls to begin.
+     * Will poll "everythingOkay".
+     */
+    fun start(everythingOkay: () -> Boolean = {true}) {
         synchronized(stateManager) {
             if (stateManager.state == State.Running) return
             stateManager.transitionStateFrom<State.Ready>(to = State.Running)
 
             try {
                 /** Wait for IO sockets, then close the server socket. */
-                serverSocket.use {
+                serverSocket.use {serverSocket ->
+                    /**
+                     * Attempt to receive the maximum number of concurrent calls from the enclave.
+                     * Check the enclave subprocess periodically to ensure that it's still alive.
+                     */
+                    val connectionSuccessful = AtomicBoolean(false)
 
-                    /** Receive the maximum number of concurrent calls from the enclave. */
-                    it.accept().use { initialSocket ->
-                        maxConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
+                    val initialConnectionThread = Thread {
+                        serverSocket.accept().use { initialSocket ->
+                            maxConcurrentCalls = DataInputStream(initialSocket.getInputStream()).readInt()
+                        }
+                        connectionSuccessful.set(true)
+                    }
+
+                    initialConnectionThread.start()
+
+                    try {
+                        while (!connectionSuccessful.get()) {
+                            check(everythingOkay()) {
+                                "Error establishing connection with enclave subprocess"
+                            }
+                            Thread.sleep(50)
+                        }
+                    } finally {
+                        initialConnectionThread.join()
                     }
 
                     /**
@@ -76,13 +102,13 @@ class SocketHostEnclaveInterface : CallInterface<EnclaveCallType, HostCallType>(
                      */
                     callContextPool = ArrayBlockingQueue(maxConcurrentCalls + 1)
                     for (i in 0 until maxConcurrentCalls) {
-                        val socket = it.accept().apply { tcpNoDelay = true }
+                        val socket = serverSocket.accept().apply { tcpNoDelay = true }
                         val callContext = EnclaveCallContext(socket)
                         callContextPool.put(callContext)
                     }
                 }
             } catch (e: Exception) {
-                stateManager.transitionStateFrom<State.Ready>(to = State.Stopped)
+                stateManager.transitionStateFrom<State.Running>(to = State.Stopped)
                 throw e
             }
         }
