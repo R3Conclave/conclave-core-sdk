@@ -1,8 +1,9 @@
 package com.r3.conclave.plugin.enclave.gradle
 
-import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAMINE
 import com.r3.conclave.common.internal.PluginUtils.DOCKER_WORKING_DIR
 import com.r3.conclave.common.internal.PluginUtils.getManifestAttribute
+import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAALVM
+import com.r3.conclave.plugin.enclave.gradle.RuntimeType.GRAMINE
 import com.r3.conclave.utilities.internal.copyResource
 import org.gradle.api.GradleException
 import org.gradle.api.model.ObjectFactory
@@ -68,11 +69,11 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
         try {
             return commandLine(dockerCommand, commandLineConfig)
         } catch (e: Exception) {
-            val message = if (OperatingSystem.current().isLinux) {
+            val message = if (OperatingSystem.current().isLinux && runtimeType.get() == GRAALVM) {
                 "Conclave requires Docker to be installed when building enclaves. Please install Docker and " +
                         "rerun your build. See https://docs.conclave.net/enclave-modes.html#system-requirements " +
-                        "for more information. If the build still fails, please rerun the build with the " +
-                        "--stacktrace flag and raise an issue at https://github.com/R3Conclave/conclave-core-sdk/issues/new"
+                        "for more information. If the build still fails, add `buildInDocker = false` in your enclave's" +
+                        "build.gradle file in conclave section."
             } else {
                 "Conclave requires Docker to be installed when building enclaves on non-Linux platforms. Please " +
                         "install Docker and rerun your build. See " +
