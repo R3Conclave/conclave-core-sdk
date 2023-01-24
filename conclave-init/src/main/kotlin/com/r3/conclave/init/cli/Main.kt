@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
     sortOptions = false,
     mixinStandardHelpOptions = true,
     header = ["Conclave Init is a tool for bootstrapping Conclave projects.%n" +
-            "See https://docs.conclave.net/conclave-init.html for more information."],
+            "See https://github.com/R3Conclave/conclave-core-sdk/wiki/Conclave-Init for more information."],
     headerHeading = "%n",
     synopsisHeading = "%nUsage:%n",
     optionListHeading = "%n",

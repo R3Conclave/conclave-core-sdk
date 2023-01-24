@@ -543,7 +543,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         throw GradleException(
             "Your enclave is configured to be signed with an external key but the file specified by '$config' in " +
                     "your build.gradle does not exist. Refer to " +
-                    "https://docs.conclave.net/signing.html#generating-keys-for-signing-an-enclave for instructions " +
+                    "https://github.com/R3Conclave/conclave-core-sdk/wiki/Enclave-Signing#generating-keys-for-signing-an-enclave for instructions " +
                     "on how to sign your enclave."
         )
     }
@@ -552,7 +552,7 @@ class GradleEnclavePlugin @Inject constructor(private val layout: ProjectLayout)
         throw GradleException(
             "Your enclave is configured to be signed with an external key but the configuration '$config' in your " +
                     "build.gradle does not exist. Refer to " +
-                    "https://docs.conclave.net/signing.html#how-to-configure-signing-for-your-enclaves for " +
+                    "https://github.com/R3Conclave/conclave-core-sdk/wiki/Enclave-Signing#how-to-configure-signing-for-your-enclaves for " +
                     "instructions on how to configure signing your enclave."
         )
     }

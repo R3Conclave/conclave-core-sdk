@@ -377,14 +377,14 @@ class EnclaveHost private constructor(
      * to do this will result in the enclave's clients detecting a "rollback" attack if the enclave is restarted.
      * Typically the sealed state should be stored in a database, inside the same database transaction that
      * processes thhe other mail commands, such as [MailCommand.PostMail]. More information can be found
-     * [here](https://docs.conclave.net/persistence.html).
+     * [here](https://github.com/R3Conclave/conclave-core-sdk/wiki/Enclave-Persistence).
      *
      * @param enclaveFileSystemFile File where the enclave's encrypted file system will be persisted to. This can be null
      * if the enclave's configured to use one. If it is then a file path must be provided. More information can be found
-     * [here](https://docs.conclave.net/persistence.html).
+     * [here](https://github.com/R3Conclave/conclave-core-sdk/wiki/Enclave-Persistence).
      *
      * @param kdsConfiguration Configuration for connecting to a key derivation service (KDS) in case the enclave needs
-     * to use one for encrypting persisted data. More information can be found [here](https://docs.conclave.net/kds-configuration.html).
+     * to use one for encrypting persisted data. More information can be found [here](https://github.com/R3Conclave/conclave-core-sdk/wiki/KDS-Configuration).
      *
      * @param commandsCallback A callback that is automatically invoked after the end of every [callEnclave] and
      * [deliverMail] call. The callback returns a list of actions, or [MailCommand]s, which need to be actioned together,

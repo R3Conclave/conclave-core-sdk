@@ -72,19 +72,19 @@ open class LinuxExec @Inject constructor(objects: ObjectFactory, private val isP
             val message = if (OperatingSystem.current().isLinux) {
                 if (runtimeType.get() == GRAALVM) {
                     "Conclave requires Docker to be installed when building enclaves. Please install Docker and " +
-                            "rerun your build. See https://docs.conclave.net/enclave-modes.html#system-requirements " +
+                            "rerun your build. See https://github.com/R3Conclave/conclave-core-sdk/wiki/Enclave-Modes#system-requirements " +
                             "for more information. If the build still fails, add `buildInDocker = false` in your enclave's" +
                             "build.gradle file in conclave section."
                 } else {
                     "Conclave requires Docker to be installed when building enclaves. Please install Docker and " +
-                            "rerun your build. See https://docs.conclave.net/enclave-modes.html#system-requirements " +
+                            "rerun your build. See https://github.com/R3Conclave/conclave-core-sdk/wiki/Enclave-Modes#system-requirements " +
                             "for more information."
                 }
             } else {
                 "Conclave requires Docker to be installed when building enclaves on non-Linux platforms. Please " +
                         "install Docker and rerun your build. See " +
-                        "https://docs.conclave.net/running-hello-world.html#prerequisites and " +
-                        "https://docs.conclave.net/writing-hello-world.html#configure-the-enclave-module for " +
+                        "https://github.com/R3Conclave/conclave-core-sdk/wiki/Run-an-enclave#prerequisites and " +
+                        "https://github.com/R3Conclave/conclave-core-sdk/wiki/Enclave-Modes#enclave-modes for " +
                         "more information."
             }
             throw GradleException(message, e)
