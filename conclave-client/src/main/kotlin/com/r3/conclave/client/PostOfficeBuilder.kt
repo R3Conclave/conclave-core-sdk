@@ -51,9 +51,9 @@ import java.security.SignatureException
  *  ### KDS
  *
  *  An alternative approach to using an enclave session key is to use a stable key from the
- *  [Key Derivation Service (KDS)](https://docs.conclave.net/kds-detail.html). The post office gets the public key
- *  needed to encrypt the mail and the enclave gets the corresponding private key to decrypt it. Only the intended
- *  enclave that matches the key policy ([KDSKeySpec.policyConstraint]) will be able to retrieve the private key from
+ *  [Key Derivation Service (KDS)](https://github.com/R3Conclave/conclave-core-sdk/wiki/Key-Derivation-Service-(KDS)).
+ *  The post office gets the public key needed to encrypt the mail and the enclave gets the corresponding private key to decrypt it.
+ *  Only the intended enclave that matches the key policy ([KDSKeySpec.policyConstraint]) will be able to retrieve the private key from
  *  the KDS. Using the KDS enables architectures which are difficult to implement with just session keys, such as a
  *  running multiple copies of the same enclave in a horizontally scaled application.
  */
@@ -123,7 +123,7 @@ class PostOfficeBuilder private constructor(
          * Create a new [PostOfficeBuilder] which will get the public key from an [InputStream] representing the
          * response to a KDS public key request. It is the caller's job to first make the HTTP REST for the public key
          * and then pass in the HTTP response body to this method. Details on the REST API can be found
-         * [here](https://docs.conclave.net/kds-rest-api.html#endpoint-public).
+         * [here](https://github.com/R3Conclave/conclave-core-sdk/wiki/KDS-Rest-API#endpoint---public).
          *
          * The [KDSKeySpec] provided must be the same one that was used in the public key request, otherwise this
          * method will fail with a [SignatureException]. The destination enclave will use this key spec to get the

@@ -24,5 +24,5 @@ java -jar client/build/libs/client-all.jar \
     PROD:1 SEC:INSECURE"
 ```
 
-For full instructions on building and running the project, see https://docs.conclave.net/conclave-init.html.
+For full instructions on building and running the project, see https://github.com/R3Conclave/conclave-core-sdk/wiki/Conclave-Init.
 

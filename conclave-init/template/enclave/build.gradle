@@ -6,7 +6,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:$jupiterVersion"
 }
 
-// See https://docs.conclave.net/enclave-configuration.html for details on how to configure the enclave.
+// See https://github.com/R3Conclave/conclave-core-sdk/wiki/Enclave-Configuration for details on how to configure the enclave.
 conclave {
     productID = 1
     revocationLevel = 0

@@ -468,7 +468,7 @@ open class NativeImage @Inject constructor(
                 throw GradleException(
                     "Conclave requires gcc to be installed when building GraalVM native-image based enclaves. "
                             + "Try running 'sudo apt-get install build-essential' or the equivalent command on your distribution to install gcc. "
-                            + "See https://docs.conclave.net/tutorial.html#setting-up-your-machine"
+                            + "See https://github.com/R3Conclave/conclave-core-sdk/wiki/Machine-setup-for-Azure-deployment#machine-setup"
                 )
             } else {
                 throw e

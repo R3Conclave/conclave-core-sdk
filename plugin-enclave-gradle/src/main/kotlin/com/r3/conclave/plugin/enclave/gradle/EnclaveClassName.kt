@@ -32,7 +32,7 @@ open class EnclaveClassName @Inject constructor(objects: ObjectFactory) : Concla
                         1 -> enclaveClasses[0].name
                         else -> throw GradleException("There can only be one Enclave class in a Gradle module but multiple " +
                                 "were found (${enclaveClasses.joinToString { it.name }}). See " +
-                                "https://docs.conclave.net/faq.html#can-i-load-more-than-one-enclave-at-once for more information.")
+                                "https://github.com/R3Conclave/conclave-core-sdk/wiki/FAQ#can-i-load-more-than-one-enclave-at-once for more information.")
                     }
                 }
         _outputEnclaveClassName.set(enclaveClassName)

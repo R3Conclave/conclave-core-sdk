@@ -211,7 +211,7 @@ tasks.withType(DokkaTask).configureEach {
                         "${file("$projectDir/docs/assets/docs_logo.svg")}",
                         "${file("$projectDir/docs/assets/arrow_down.svg")}"
                     ],
-                    "footerMessage": "<a href=\\\"https://docs.conclave.net\\\">&#60;&#60; Back to Conclave documentation</a>"
+                    "footerMessage": "<a href=\\\"https://github.com/R3Conclave/conclave-core-sdk/wiki\\\">&#60;&#60; Back to Conclave documentation</a>"
                 }"""
             )
 
