@@ -1,3 +1,7 @@
+> :warning: Please note the Conclave SDK is discontinued and is no longer actively maintained. Please feel free to fork this 
+repo if you wish to continue making improvements. For any further queries, including use of the Key Derivation Service (KDS),
+please reach out to [R3](https://www.r3.com/contact/).
+
 [![Conclave Core SDK](.github/assets/logo.png)][conclave_website]
 
 The [Conclave Core SDK][docs] is an open source platform that lets you create SGX enclaves easily. You can 
@@ -13,16 +17,6 @@ The Conclave Core SDK is developed by [R3][r3_website], and has been made availa
 If you want to learn how to use Conclave and build enclaves, take a look at the
 [hello world example and tutorial][hello_world]. You can also refer to the [Conclave documentation][docs] and
 [API docs](https://docs.conclave.net/api/index.html).
-
-## Contributing
-We encourage you to contribute to Conclave. Please read our contribution [guidelines](CONTRIBUTING.md).
-
-### Community
-You can also interact with the Conclave community on these channels:
-
-[Discord](https://discord.gg/zpHKkMZ8Sw)
-
-[Mailing list](https://groups.io/g/conclave-discuss)
 
 ## Building the SDK
 If you want to build the SDK, you can do so both on Linux and macOS (Intel only) using a development Docker container.
